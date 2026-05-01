@@ -4,13 +4,12 @@ Test-Time Augmentation (TTA) for landmark detection.
 Run 8 augmented versions of each image, average the heatmaps,
 then localise with gaussian_subpixel_argmax (window=7).
 
-FIX: switched from quadratic_subpixel_argmax to gaussian_subpixel_argmax.
 Quadratic fits a parabola to 3 points — brittle when the heatmap peak is
 flat or noisy. Gaussian uses a weighted centroid over a 15×15 window,
 which is more robust across the full range of heatmap sharpness.
 
 Usage:
-    python tta_eval.py --checkpoint checkpoints/2026-04-26_23-03-00/best_model.pth
+    python tta_eval.py --checkpoint checkpoints/xxxx-xx-xxxx/best_model.pth
 """
 
 import argparse
