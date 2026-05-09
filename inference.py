@@ -158,20 +158,34 @@ def predict_landmarks(image, checkpoint=None, model=None, device=None, use_tta=T
 
 def extract_gt_coords(mask_2d):
     """
-    Extract ground truth landmark coords from a 2D mask slice using the same
-    method as LandmarkDataset — the two most distant foreground points.
+    Extract ground truth landmark coords from a 2D mask slice.
 
-    mask_2d : [H, W] numpy array
-    returns : np.ndarray [4] (x1,y1,x2,y2) in pixel space, or None if no mask
+    Matches LandmarkDataset._extract_points() exactly:
+      - Label 1 = first RV insertion point
+      - Label 2 = second RV insertion point
+      - Each is a small ~5-7 pixel annotation cluster
+      - Returns centroid of each cluster as the landmark coordinate
+      - LM1 = superior point (smaller row index), LM2 = inferior point
+
+    mask_2d : [H, W] numpy array with labels 0, 1, 2
+    returns : np.ndarray [4] (x1,y1,x2,y2) in pixel space, or None
     """
-    pts = np.argwhere(mask_2d > 0)
-    if len(pts) < 2:
+    pts_1 = np.argwhere(mask_2d == 1)   # first RV insertion point pixels
+    pts_2 = np.argwhere(mask_2d == 2)   # second RV insertion point pixels
+
+    if len(pts_1) == 0 or len(pts_2) == 0:
         return None
-    dists = np.linalg.norm(pts[:, None] - pts[None, :], axis=-1)
-    i, j  = np.unravel_index(np.argmax(dists), dists.shape)
-    p1, p2 = pts[i], pts[j]
+
+    # Centroid of each annotation cluster (row, col)
+    p1 = pts_1.mean(axis=0)
+    p2 = pts_2.mean(axis=0)
+
+    # Enforce consistent ordering: LM1 = superior (smaller row index)
+    if p1[0] > p2[0]:
+        p1, p2 = p2, p1
+
+    # Return as (x1, y1, x2, y2) where x=col, y=row
     return np.array([p1[1], p1[0], p2[1], p2[0]], dtype=np.float32)
-    # note: argwhere returns [row, col] = [y, x], so we swap to [x, y]
 
 
 def compute_mre(pred_coords, gt_coords):
@@ -194,9 +208,10 @@ def find_best_slices(vol, mask_vol=None, top_k=5):
     If mask_vol is provided, only considers slices that have mask annotations.
     """
     if mask_vol is not None:
-        # prefer slices with GT annotations
+        # prefer slices with GT annotations — require BOTH labels present
         annotated = [i for i in range(vol.shape[2])
-                     if np.sum(mask_vol[:, :, i] > 0) >= 2]
+                     if np.any(mask_vol[:, :, i] == 1) and
+                        np.any(mask_vol[:, :, i] == 2)]
         if annotated:
             variances = {i: vol[:, :, i].var() for i in annotated}
             ranked    = sorted(annotated, key=lambda i: variances[i], reverse=True)

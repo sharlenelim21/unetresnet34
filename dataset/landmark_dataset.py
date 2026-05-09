@@ -96,7 +96,7 @@ class LandmarkDataset(Dataset):
         slice_axis=2,
         augment=False,
         sigma=8,
-        min_landmark_dist=30,
+        min_landmark_dist=5,
         min_slice_variance=0.01,
     ):
         self.image_dir          = image_dir
@@ -153,7 +153,8 @@ class LandmarkDataset(Dataset):
 
                 for i in range(n_slices):
                     mask_2d = np.take(mask, i, axis=axis)
-                    if np.sum(mask_2d > 0) < 2:
+                    # Require both RV insertion point labels to be present
+                    if not (np.any(mask_2d == 1) and np.any(mask_2d == 2)):
                         continue
                     coords = self._extract_points(mask_2d)
                     if coords is None:
@@ -237,14 +238,33 @@ class LandmarkDataset(Dataset):
         )
 
     def _extract_points(self, mask):
-        pts = np.argwhere(mask > 0)
-        if len(pts) < 2:
-            return None
-        dists = np.linalg.norm(pts[:, None] - pts[None, :], axis=-1)
-        i, j  = np.unravel_index(np.argmax(dists), dists.shape)
-        p1, p2 = pts[i], pts[j]
+        """
+        Extract two RV insertion point landmarks from the mask.
 
-        if p1[0] > p2[0]:   # p1[0] is row index (y); smaller = more superior
+        Label 1 = first RV insertion point  (anterior)
+        Label 2 = second RV insertion point (inferior)
+
+        Each label is a small cluster of ~5-7 manually placed pixels.
+        We take the centroid of each cluster as the landmark coordinate,
+        which is more stable and accurate than using farthest edge pixels.
+
+        LM1 is assigned to the superior point (smaller row index = higher
+        in the image), LM2 to the inferior point, for consistent ordering
+        across all slices.
+        """
+        pts_1 = np.argwhere(mask == 1)   # first RV insertion point pixels
+        pts_2 = np.argwhere(mask == 2)   # second RV insertion point pixels
+
+        if len(pts_1) == 0 or len(pts_2) == 0:
+            return None
+
+        # Centroid of each annotation cluster (row, col)
+        p1 = pts_1.mean(axis=0)
+        p2 = pts_2.mean(axis=0)
+
+        # Enforce consistent ordering: LM1 = superior (smaller row index)
+        if p1[0] > p2[0]:
             p1, p2 = p2, p1
 
+        # Return as (x1, y1, x2, y2) where x=col, y=row
         return np.array([p1[1], p1[0], p2[1], p2[0]], dtype=np.float32)

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cardiac Frame Viewer Prototype</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="viewer-panel" aria-label="Frame viewer">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Cardiac Landmark Viewer</p>
+            <h1 id="caseTitle">DET0026101</h1>
+          </div>
+          <div class="case-switcher" role="group" aria-label="Case selection"></div>
+        </div>
+
+        <div class="image-stage">
+          <img id="frameImage" alt="Current cardiac inference frame">
+          <div id="maskOverlay" class="mask-overlay" aria-hidden="true"></div>
+          <div class="frame-badge">
+            <span id="sliceLabel">Slice 0</span>
+            <span id="frameCount">1 / 5</span>
+          </div>
+        </div>
+
+        <div class="timeline">
+          <button id="prevBtn" class="icon-btn" type="button" title="Previous frame" aria-label="Previous frame">
+            <span aria-hidden="true">&lt;</span>
+          </button>
+          <button id="playBtn" class="play-btn" type="button" aria-label="Play frames">
+            <span id="playIcon" aria-hidden="true">Play</span>
+          </button>
+          <button id="nextBtn" class="icon-btn" type="button" title="Next frame" aria-label="Next frame">
+            <span aria-hidden="true">&gt;</span>
+          </button>
+          <input id="frameSlider" type="range" min="0" max="4" value="0" aria-label="Frame scrubber">
+          <select id="speedSelect" aria-label="Playback speed">
+            <option value="1200">0.8 fps</option>
+            <option value="700" selected>1.4 fps</option>
+            <option value="400">2.5 fps</option>
+            <option value="240">4.2 fps</option>
+          </select>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="Display controls">
+        <h2>Display</h2>
+        <label class="toggle-row">
+          <input id="combinedToggle" type="checkbox" checked>
+          <span>Combined result frame</span>
+        </label>
+        <label class="toggle-row">
+          <input id="maskToggle" type="checkbox" checked>
+          <span>Segmentation mask overlay</span>
+        </label>
+        <label class="toggle-row">
+          <input id="landmarkToggle" type="checkbox" checked>
+          <span>Landmark overlay</span>
+        </label>
+
+        <div class="legend">
+          <div><span class="swatch swatch-mask"></span>Mask layer placeholder</div>
+          <div><span class="swatch swatch-lm1"></span>Pred LM1</div>
+          <div><span class="swatch swatch-lm2"></span>Pred LM2</div>
+          <div><span class="swatch swatch-gt"></span>Ground truth</div>
+        </div>
+
+        <div class="note">
+          This prototype plays the existing exported PNG result frames. When the segmentation pipeline exports per-slice masks, add `mask: "../path/to/mask.png"` to each frame in `manifest.js` and the same viewer can render it as a real overlay.
+        </div>
+      </aside>
+    </main>
+
+    <script src="./manifest.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
