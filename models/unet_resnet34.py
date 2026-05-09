@@ -3,6 +3,7 @@ ResNet-34 + UNet decoder with:
   - CBAM attention in bottleneck
   - Deep supervision aux heads at /8 and /4
   - Wider decoder (dec2 = 128ch)
+  - in_channels parameter properly supported (1 or 2)
 """
 
 import torch
@@ -139,7 +140,8 @@ class _FallbackUNet(nn.Module):
 
 
 class ResNetUNet(nn.Module):
-    def __init__(self, num_classes=2, dropout=0.2, pretrained=True):
+    # ── FIX: added in_channels parameter ─────────────────────────────────────
+    def __init__(self, in_channels=1, num_classes=2, dropout=0.2, pretrained=True):
         super().__init__()
         if not TORCHVISION_AVAILABLE:
             raise ImportError("torchvision not installed.")
@@ -148,10 +150,22 @@ class ResNetUNet(nn.Module):
         backbone = resnet34(weights=weights)
 
         orig  = backbone.conv1
-        new_c = nn.Conv2d(1, 64, 7, stride=2, padding=3, bias=False)
+
+        # ── FIX: properly handle any in_channels value ────────────────────────
+        new_c = nn.Conv2d(in_channels, 64, 7, stride=2, padding=3, bias=False)
         with torch.no_grad():
-            new_c.weight = nn.Parameter(orig.weight.mean(dim=1, keepdim=True))
+            if in_channels == 1:
+                # Collapse 3 ImageNet channels → 1 by averaging
+                new_c.weight = nn.Parameter(orig.weight.mean(dim=1, keepdim=True))
+            else:
+                # For 2 channels: average ImageNet weights then tile across channels
+                # Each input channel gets an equal share of the pretrained knowledge
+                avg = orig.weight.mean(dim=1, keepdim=True)          # (64, 1, 7, 7)
+                new_c.weight = nn.Parameter(
+                    avg.repeat(1, in_channels, 1, 1) / in_channels   # (64, 2, 7, 7)
+                )
         backbone.conv1 = new_c
+        # ─────────────────────────────────────────────────────────────────────
 
         self.enc0 = nn.Sequential(backbone.conv1, backbone.bn1, backbone.relu)
         self.pool = backbone.maxpool
@@ -204,9 +218,11 @@ class _CardiacResNetEncoder(nn.Module):
     REPO = "nickcoutsos/medicalnet-resnet34-2d"
     FILE = "resnet34_2d.pth"
 
+    # ── FIX: pass in_channels through to ResNetUNet ───────────────────────────
     @classmethod
-    def try_load(cls, num_classes=2, dropout=0.2):
-        model = ResNetUNet(num_classes=num_classes, dropout=dropout, pretrained=True)
+    def try_load(cls, in_channels=1, num_classes=2, dropout=0.2):
+        model = ResNetUNet(in_channels=in_channels, num_classes=num_classes,
+                           dropout=dropout, pretrained=True)
         if not HF_AVAILABLE:
             print("Warning: huggingface_hub not installed - using ImageNet weights.")
             return model
@@ -215,8 +231,12 @@ class _CardiacResNetEncoder(nn.Module):
             ckpt  = hf_hub_download(repo_id=cls.REPO, filename=cls.FILE)
             state = torch.load(ckpt, map_location="cpu")
             state = {k.replace("encoder.", ""): v for k, v in state.items()}
-            if "conv1.weight" in state and state["conv1.weight"].shape[1] != 1:
-                state["conv1.weight"] = state["conv1.weight"].mean(dim=1, keepdim=True)
+            if "conv1.weight" in state:
+                w = state["conv1.weight"]
+                if w.shape[1] != in_channels:
+                    # Adapt pretrained conv1 to the required number of channels
+                    avg = w.mean(dim=1, keepdim=True)
+                    state["conv1.weight"] = avg.repeat(1, in_channels, 1, 1) / in_channels
             enc_keys = {"enc0","enc1","enc2","enc3","enc4","pool"}
             filtered = {k: v for k,v in state.items() if any(k.startswith(p) for p in enc_keys)}
             missing, unexpected = model.load_state_dict(filtered, strict=False)
@@ -233,7 +253,9 @@ def UNetResNet34(in_channels=1, num_classes=2, dropout=0.2,
         print("torchvision not found - using attention UNet fallback")
         return _FallbackUNet(in_channels=in_channels, num_classes=num_classes, dropout=dropout)
     if cardiac_pretrained and pretrained:
-        #print("Attempting cardiac-pretrained ResNet-34 encoder...")
-        return _CardiacResNetEncoder.try_load(num_classes=num_classes, dropout=dropout)
+        return _CardiacResNetEncoder.try_load(
+            in_channels=in_channels, num_classes=num_classes, dropout=dropout
+        )
     print("Using ResNet-34 ImageNet pretrained encoder")
-    return ResNetUNet(num_classes=num_classes, dropout=dropout, pretrained=pretrained)
+    return ResNetUNet(in_channels=in_channels, num_classes=num_classes,
+                      dropout=dropout, pretrained=pretrained)
