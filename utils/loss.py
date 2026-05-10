@@ -37,7 +37,7 @@ class HeatmapLoss(nn.Module):
     """
     Balanced heatmap + coordinate loss.
 
-    FIX: Default wing_w lowered from 0.05 → 0.02.
+    Default wing_w lowered from 0.05 → 0.02.
     In normalised [0,1] space, wing_w is the threshold (in fraction of image
     width) below which the loss switches from linear to log.
     0.05 → threshold at ~13px  (too coarse — easy samples dominate)

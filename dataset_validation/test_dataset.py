@@ -1,3 +1,5 @@
+import sys
+sys.path.append(".")
 from dataset.landmark_dataset import LandmarkDataset
 
 dataset = LandmarkDataset(

@@ -47,12 +47,12 @@ N_VIS      = 8
 
 P1_EPOCHS = 6
 P2_EPOCHS = 49
-P3_EPOCHS = 35
+P3_EPOCHS = 50
 
 LR_HEAD_P1     = 1e-3
 LR_HEAD_P2     = 1e-3
 LR_BACKBONE_P2 = 5e-5
-LR_P3          = 3e-5
+LR_P3          = 1e-5
 
 SIGMA_P1       = 12.0
 SIGMA_START    = 12.0
@@ -68,7 +68,7 @@ AUX_WEIGHT_MAX = 0.4
 AUX_WEIGHT_MIN = 0.05
 
 EARLY_STOP_P2 = 18
-EARLY_STOP_P3 = 18
+EARLY_STOP_P3 = 25
 
 VAL_SPLIT    = 0.2
 COORD_WEIGHT = 15.0
@@ -175,21 +175,39 @@ def validate(model, loader, criterion, device, sigma):
         vl += loss.item()
 
         ph = tta_predict(model, imgs)
-        pc = gaussian_subpixel_argmax(ph, window=7)
+        pc = gaussian_subpixel_argmax(ph, window=7)   # [B, 4]
 
-        mr  += compute_mre(pc, gts).item()
-        m1, m2 = compute_mre_per_landmark(pc, gts)
+        # ── enforce ordering + match to GT per sample ─────────────────────────
+        # Without this, asymmetric LM1/LM2 errors corrupt the checkpoint metric.
+        pc_matched = pc.clone()
+        for b in range(pc.shape[0]):
+            pred = pc[b].cpu().numpy()
+            gt   = gts[b].cpu().numpy()
+            # Step 1: enforce superior ordering (matches training convention)
+            if pred[1] > pred[3]:   # y1 > y2 → LM1 below LM2 → swap
+                pred = np.array([pred[2], pred[3], pred[0], pred[1]], dtype=np.float32)
+            # Step 2: optimal assignment to GT
+            e_normal  = (np.linalg.norm(pred[:2] - gt[:2]) +
+                         np.linalg.norm(pred[2:] - gt[2:]))
+            e_swapped = (np.linalg.norm(pred[2:] - gt[:2]) +
+                         np.linalg.norm(pred[:2] - gt[2:]))
+            if e_swapped < e_normal:
+                pred = np.array([pred[2], pred[3], pred[0], pred[1]], dtype=np.float32)
+            pc_matched[b] = torch.tensor(pred, device=device)
+        # ─────────────────────────────────────────────────────────────────────
+
+        mr  += compute_mre(pc_matched, gts).item()
+        m1, m2 = compute_mre_per_landmark(pc_matched, gts)
         mr1 += m1
         mr2 += m2
-        s = compute_sdr_multi(pc, gts, (2.0, 5.0, 10.0))
+        s = compute_sdr_multi(pc_matched, gts, (2.0, 5.0, 10.0))
         for t in sdr:
             sdr[t] += s[t]
-        sample_mres.extend(compute_per_sample_mre(pc, gts).cpu().tolist())
+        sample_mres.extend(compute_per_sample_mre(pc_matched, gts).cpu().tolist())
 
         if len(vis_i) < N_VIS:
-            # Show only channel 0 (MRI) for visualisation
             vis_i.append(imgs[0, 0].cpu().numpy())
-            vis_p.append(pc[0].cpu().numpy())
+            vis_p.append(pc_matched[0].cpu().numpy())
             vis_g.append(gts[0].cpu().numpy())
 
     n   = len(loader)

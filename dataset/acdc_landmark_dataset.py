@@ -63,6 +63,22 @@ def random_crop_resize(image, coords, crop_ratio=0.85):
     return resized, new_coords
 
 
+def enforce_superior_ordering(coords):
+    """
+    Ensure LM1 (coords[0:2]) is always the superior point (smaller y index).
+
+    Any augmentation that flips or rotates the image can cause LM1 and LM2
+    to swap their vertical positions. Calling this after all augmentations
+    guarantees the channel assignment is consistent with training convention:
+      channel 0 heatmap → superior (upper) RV insertion point
+      channel 1 heatmap → inferior (lower) RV insertion point
+    """
+    x1, y1, x2, y2 = coords
+    if y1 > y2:   # LM1 has drifted below LM2 — swap
+        return np.array([x2, y2, x1, y1], dtype=np.float32)
+    return coords
+
+
 def random_rotate(image, coords, max_angle=45):
     H, W = image.shape
     angle = np.random.uniform(-max_angle, max_angle)
@@ -236,19 +252,24 @@ class ACDCLandmarkDataset(Dataset):
 
             # Rotation (apply same transform to both channels)
             if np.random.rand() < 0.7:
-                img_resized, coords_scaled = random_rotate(
-                    img_resized, coords_scaled, max_angle=45
-                )
-                # Rotate seg mask with the same angle — use last rotation matrix
-                # (stored implicitly; re-rotate seg with same call structure)
+                # Generate one angle and apply to BOTH image and seg mask
                 angle = np.random.uniform(-45, 45)
-                H, W  = seg_resized.shape
+                H, W  = img_resized.shape
                 M     = cv2.getRotationMatrix2D((W/2, H/2), angle, 1.0)
-                seg_resized = cv2.warpAffine(
-                    seg_resized, M, (W, H),
-                    flags=cv2.INTER_NEAREST,
-                    borderMode=cv2.BORDER_CONSTANT, borderValue=0
-                )
+
+                # Rotate image (bilinear) and update coords
+                img_resized = cv2.warpAffine(img_resized, M, (W, H),
+                                             flags=cv2.INTER_LINEAR,
+                                             borderMode=cv2.BORDER_REFLECT)
+                for i in range(2):
+                    px, py = coords_scaled[i*2], coords_scaled[i*2+1]
+                    coords_scaled[i*2]   = np.clip(M[0,0]*px + M[0,1]*py + M[0,2], 0, W-1)
+                    coords_scaled[i*2+1] = np.clip(M[1,0]*px + M[1,1]*py + M[1,2], 0, H-1)
+
+                # Rotate seg mask with SAME matrix (nearest neighbour, no interpolation)
+                seg_resized = cv2.warpAffine(seg_resized, M, (W, H),
+                                             flags=cv2.INTER_NEAREST,
+                                             borderMode=cv2.BORDER_CONSTANT, borderValue=0)
 
             # Intensity jitter (MRI only — don't jitter the seg mask)
             if np.random.rand() < 0.5:
@@ -273,6 +294,10 @@ class ACDCLandmarkDataset(Dataset):
                     crop_ratio=np.random.uniform(0.80, 0.95)
                 )
 
+        # ── re-enforce superior/inferior ordering after all augmentations ───────
+        # Flips and rotations can swap LM1/LM2 vertical positions.
+        # This guarantees channel 0 = upper RVIP, channel 1 = lower RVIP.
+        coords_scaled = enforce_superior_ordering(coords_scaled)
         coords_scaled = np.clip(coords_scaled, 0, 255)
 
         # ── stack into 2-channel input ────────────────────────────────────────

@@ -65,6 +65,22 @@ def random_rotate(image, coords, max_angle=45):
     return rotated, new_coords
 
 
+def enforce_superior_ordering(coords):
+    """
+    Ensure LM1 (coords[0:2]) is always the superior point (smaller y index).
+
+    Any augmentation that flips or rotates the image can cause LM1 and LM2
+    to swap their vertical positions. Calling this after all augmentations
+    guarantees the channel assignment is consistent with training convention:
+      channel 0 heatmap → superior (upper) RV insertion point
+      channel 1 heatmap → inferior (lower) RV insertion point
+    """
+    x1, y1, x2, y2 = coords
+    if y1 > y2:   # LM1 has drifted below LM2 — swap
+        return np.array([x2, y2, x1, y1], dtype=np.float32)
+    return coords
+
+
 # ── per-patient normalization cache ───────────────────────────────────────────
 
 class _PatientNormCache:
@@ -96,7 +112,7 @@ class LandmarkDataset(Dataset):
         slice_axis=2,
         augment=False,
         sigma=8,
-        min_landmark_dist=5,
+        min_landmark_dist=30,
         min_slice_variance=0.01,
     ):
         self.image_dir          = image_dir
@@ -153,8 +169,7 @@ class LandmarkDataset(Dataset):
 
                 for i in range(n_slices):
                     mask_2d = np.take(mask, i, axis=axis)
-                    # Require both RV insertion point labels to be present
-                    if not (np.any(mask_2d == 1) and np.any(mask_2d == 2)):
+                    if np.sum(mask_2d > 0) < 2:
                         continue
                     coords = self._extract_points(mask_2d)
                     if coords is None:
@@ -226,6 +241,10 @@ class LandmarkDataset(Dataset):
                     image_resized, coords_scaled, crop_ratio=np.random.uniform(0.80, 0.95)
                 )
 
+        # ── re-enforce superior/inferior ordering after all augmentations ───────
+        # Flips and rotations can swap LM1/LM2 vertical positions.
+        # This guarantees channel 0 = upper RVIP, channel 1 = lower RVIP.
+        coords_scaled = enforce_superior_ordering(coords_scaled)
         coords_scaled = np.clip(coords_scaled, 0, 255)
         image_resized = np.expand_dims(image_resized, axis=0)
 
@@ -238,33 +257,14 @@ class LandmarkDataset(Dataset):
         )
 
     def _extract_points(self, mask):
-        """
-        Extract two RV insertion point landmarks from the mask.
-
-        Label 1 = first RV insertion point  (anterior)
-        Label 2 = second RV insertion point (inferior)
-
-        Each label is a small cluster of ~5-7 manually placed pixels.
-        We take the centroid of each cluster as the landmark coordinate,
-        which is more stable and accurate than using farthest edge pixels.
-
-        LM1 is assigned to the superior point (smaller row index = higher
-        in the image), LM2 to the inferior point, for consistent ordering
-        across all slices.
-        """
-        pts_1 = np.argwhere(mask == 1)   # first RV insertion point pixels
-        pts_2 = np.argwhere(mask == 2)   # second RV insertion point pixels
-
-        if len(pts_1) == 0 or len(pts_2) == 0:
+        pts = np.argwhere(mask > 0)
+        if len(pts) < 2:
             return None
+        dists = np.linalg.norm(pts[:, None] - pts[None, :], axis=-1)
+        i, j  = np.unravel_index(np.argmax(dists), dists.shape)
+        p1, p2 = pts[i], pts[j]
 
-        # Centroid of each annotation cluster (row, col)
-        p1 = pts_1.mean(axis=0)
-        p2 = pts_2.mean(axis=0)
-
-        # Enforce consistent ordering: LM1 = superior (smaller row index)
-        if p1[0] > p2[0]:
+        if p1[0] > p2[0]:   # p1[0] is row index (y); smaller = more superior
             p1, p2 = p2, p1
 
-        # Return as (x1, y1, x2, y2) where x=col, y=row
         return np.array([p1[1], p1[0], p2[1], p2[0]], dtype=np.float32)
