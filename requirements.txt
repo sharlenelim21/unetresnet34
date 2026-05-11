@@ -12,5 +12,6 @@ tqdm
 scikit-learn
 scikit-image
 simpleitk
+pynrrd
 einops
 huggingface_hub

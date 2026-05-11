@@ -120,6 +120,7 @@ class ACDCLandmarkDataset(Dataset):
         sigma=8,
         min_landmark_dist=5,
         min_slice_variance=0.01,
+        n_channels=2,
     ):
         self.image_dir          = image_dir
         self.mask_dir           = mask_dir
@@ -129,6 +130,7 @@ class ACDCLandmarkDataset(Dataset):
         self.sigma              = sigma
         self.min_landmark_dist  = min_landmark_dist
         self.min_slice_variance = min_slice_variance
+        self.n_channels         = n_channels
 
         self.samples = self._build_samples()
 
@@ -223,10 +225,20 @@ class ACDCLandmarkDataset(Dataset):
         seg_resized = cv2.resize(seg_2d, (256, 256),
                                  interpolation=cv2.INTER_NEAREST).astype(np.float32)
 
-        # Normalise seg to 0-1 range (labels are 0,1,2,3 → divide by 3)
-        seg_max = seg_resized.max()
-        if seg_max > 0:
-            seg_resized = seg_resized / seg_max
+        # ── Fix 2: blank channel fallback ────────────────────────────────────
+        # If RV (label 1) is absent from this slice (apex/base slices), the
+        # seg mask provides no useful anchor for LM1 (anterior insertion point).
+        # Zeroing the channel forces the model to fall back to MRI-only mode
+        # for those slices, rather than learning from a misleading partial mask.
+        # This makes the model robust to missing RV in the seg channel.
+        if not np.any(np.round(seg_resized) == 1):
+            seg_resized = np.zeros_like(seg_resized)
+        else:
+            # Normalise seg to 0-1 range (labels are 0,1,2,3 → divide by 3)
+            seg_max = seg_resized.max()
+            if seg_max > 0:
+                seg_resized = seg_resized / seg_max
+        # ─────────────────────────────────────────────────────────────────────
 
         # ── scale landmark coords to 256-space ───────────────────────────────
         x1, y1, x2, y2 = coords
@@ -300,8 +312,11 @@ class ACDCLandmarkDataset(Dataset):
         coords_scaled = enforce_superior_ordering(coords_scaled)
         coords_scaled = np.clip(coords_scaled, 0, 255)
 
-        # ── stack into 2-channel input ────────────────────────────────────────
-        image_2ch = np.stack([img_resized, seg_resized], axis=0)  # (2, 256, 256)
+        # stack into 1- or 2-channel input
+        if self.n_channels == 1:
+            image_2ch = img_resized[np.newaxis]                       # (1, 256, 256) -- MRI only
+        else:
+            image_2ch = np.stack([img_resized, seg_resized], axis=0)  # (2, 256, 256)
 
         # ── generate heatmaps ─────────────────────────────────────────────────
         heatmaps = coords_to_heatmaps(coords_scaled, (256, 256), sigma=self.sigma)

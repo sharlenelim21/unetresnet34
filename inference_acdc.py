@@ -68,6 +68,11 @@ def preprocess_2ch(img_2d, seg_2d):
     """
     Prepare a 2-channel input tensor from MRI slice and seg mask slice.
     Returns [1, 2, 256, 256] tensor.
+
+    Fix 2 — blank channel fallback:
+    If RV (label 1) is absent from the seg mask (apex/base slices), the
+    second channel is zeroed out. This forces the model to use MRI-only
+    mode for those slices, consistent with how it was trained.
     """
     # Channel 1 — MRI
     img_r = cv2.resize(img_2d.astype(np.float32), (MODEL_INPUT_SIZE, MODEL_INPUT_SIZE))
@@ -78,9 +83,14 @@ def preprocess_2ch(img_2d, seg_2d):
     # Channel 2 — seg mask (nearest neighbour, normalise to 0-1)
     seg_r = cv2.resize(seg_2d.astype(np.float32), (MODEL_INPUT_SIZE, MODEL_INPUT_SIZE),
                        interpolation=cv2.INTER_NEAREST)
-    seg_max = seg_r.max()
-    if seg_max > 0:
-        seg_r = seg_r / seg_max
+
+    # Blank the channel if RV is absent — matches training behaviour
+    if not np.any(np.round(seg_r) == 1):
+        seg_r = np.zeros_like(seg_r)
+    else:
+        seg_max = seg_r.max()
+        if seg_max > 0:
+            seg_r = seg_r / seg_max
 
     # Stack → [1, 2, 256, 256]
     two_ch = np.stack([img_r, seg_r], axis=0)
@@ -313,21 +323,39 @@ def visualize_prediction(img_2d, seg_2d, coords, heatmap=None,
 
 # ── full test set evaluation ──────────────────────────────────────────────────
 
-def evaluate_test_set(model, device, out_dir="inference_acdc_results", use_tta=True):
+def has_rv_in_seg(seg_2d):
+    """
+    Returns True if RV (label 1) is present in the segmentation mask slice.
+    Slices near the apex or base may have no RV visible — the model loses
+    its anatomical anchor for LM1 in those cases.
+    """
+    return np.any(np.round(seg_2d) == 1)
+
+
+def evaluate_test_set(model, device, out_dir="inference_acdc_results",
+                      use_tta=True, rv_only=False):
     """
     Run inference on all ACDC test split volumes and report aggregate metrics.
+
+    rv_only : if True, skip slices where RV (label 1) is absent from the
+              segmentation mask. These are typically apex/base slices where
+              LM1 cannot be anchored anatomically. Reported numbers will be
+              better but you must state this filtering criterion in your report.
     """
     os.makedirs(out_dir, exist_ok=True)
 
     files = sorted([f for f in os.listdir(TEST_IMAGE_DIR)
                     if f.endswith(".nii.gz") and "_gt" not in f])
 
-    all_mres = []
-    all_e1   = []
-    all_e2   = []
+    all_mres  = []
+    all_e1    = []
+    all_e2    = []
+    skipped_no_rv = 0
 
+    filter_label = " (RV-present slices only)" if rv_only else " (all annotated slices)"
     print(f"\n{'-'*75}")
-    print(f"{'File':<35} {'Slice':>5}  {'MRE':>8}  {'LM1 err':>8}  {'LM2 err':>8}")
+    print(f"Evaluation mode: {filter_label}")
+    print(f"{'File':<35} {'Slice':>5}  {'RV':>4}  {'MRE':>8}  {'LM1 err':>8}  {'LM2 err':>8}")
     print(f"{'-'*75}")
 
     for fname in files:
@@ -358,6 +386,13 @@ def evaluate_test_set(model, device, out_dir="inference_acdc_results", use_tta=T
             img_2d = img[:, :, i]
             seg_2d = seg[:, :, i]
 
+            # Fix 1 — skip slices with no RV in seg mask if rv_only mode
+            rv_present = has_rv_in_seg(seg_2d)
+            if rv_only and not rv_present:
+                skipped_no_rv += 1
+                print(f"  {fname:<33} {i:>5}  {'NO':>4}  (skipped — no RV in seg mask)")
+                continue
+
             coords, heatmap = predict_landmarks(
                 img_2d, seg_2d, model, device, use_tta=use_tta
             )
@@ -374,7 +409,8 @@ def evaluate_test_set(model, device, out_dir="inference_acdc_results", use_tta=T
             all_e1.append(e1)
             all_e2.append(e2)
 
-            print(f"  {fname:<33} {i:>5}  {mre:>8.2f}px  {e1:>7.1f}px  {e2:>7.1f}px")
+            rv_str = "YES" if rv_present else "NO"
+            print(f"  {fname:<33} {i:>5}  {rv_str:>4}  {mre:>8.2f}px  {e1:>7.1f}px  {e2:>7.1f}px")
 
             save_path = os.path.join(out_dir, f"{base}_slice{i:03d}.png")
             visualize_prediction(
@@ -388,7 +424,10 @@ def evaluate_test_set(model, device, out_dir="inference_acdc_results", use_tta=T
 
     if len(all_mres) > 0:
         arr = np.array(all_mres)
-        print(f"\nSummary across {len(arr)} annotated slices:")
+        print(f"\nSummary{filter_label}:")
+        print(f"  Evaluated slices : {len(arr)}")
+        if rv_only:
+            print(f"  Skipped (no RV)  : {skipped_no_rv}")
         print(f"  Mean MRE  : {arr.mean():.2f}px")
         print(f"  Std MRE   : {arr.std():.2f}px")
         print(f"  P50  MRE  : {np.percentile(arr, 50):.2f}px")
@@ -400,6 +439,9 @@ def evaluate_test_set(model, device, out_dir="inference_acdc_results", use_tta=T
         print(f"  SDR@10px  : {(arr < 10.0).mean():.1%}")
         print(f"\n  Mean LM1 error : {np.mean(all_e1):.2f}px")
         print(f"  Mean LM2 error : {np.mean(all_e2):.2f}px")
+        if rv_only:
+            print(f"\n  Note: results computed on RV-present slices only.")
+            print(f"  Apex/base slices without RV in seg mask were excluded.")
         print(f"\nResults saved to: {out_dir}/")
 
     return arr
@@ -421,6 +463,10 @@ if __name__ == "__main__":
                         help="Auto-select slices with RVIP annotations")
     parser.add_argument("--eval", action="store_true",
                         help="Evaluate full test split and report metrics")
+    parser.add_argument("--rv-only", action="store_true",
+                        help="Skip slices where RV is absent from seg mask "
+                             "(apex/base slices). Reports cleaner numbers but "
+                             "must be stated as a filtering criterion in report.")
     parser.add_argument("--no-tta", action="store_true",
                         help="Disable TTA")
     parser.add_argument("--out", default="inference_acdc_results",
@@ -441,7 +487,8 @@ if __name__ == "__main__":
 
     # ── full evaluation mode ──────────────────────────────────────────────────
     if args.eval:
-        evaluate_test_set(model, device, out_dir=out_dir, use_tta=use_tta)
+        evaluate_test_set(model, device, out_dir=out_dir,
+                          use_tta=use_tta, rv_only=args.rv_only)
 
     # ── single image mode ─────────────────────────────────────────────────────
     elif args.image is not None:
