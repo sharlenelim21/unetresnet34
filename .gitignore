@@ -9,7 +9,6 @@ inference_results/
 inference_acdc_results/
 tta_results/
 
-data/lv-landmark/
-data/rvip/
-data/acdc-cleaned/
+data/rv-landmark/
+data/acdc/
 
