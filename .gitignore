@@ -7,8 +7,9 @@ checkpoints/
 results/
 inference_results/
 inference_acdc_results/
+inference_rv_results/
 tta_results/
 
-data/rv-landmark/
+data/rv_landmark/
 data/acdc/
 

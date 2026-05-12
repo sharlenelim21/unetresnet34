@@ -33,14 +33,10 @@ from utils.metrics import (compute_mre, compute_mre_per_landmark,
 from utils.visualize import save_epoch_grid, save_training_curve
 
 # ─────────────────────────────────────────────────────────────
-# Data paths — ACDC 2-channel split
-TRAIN_IMAGE_DIR = "data/acdc-cleaned/train_split/images"
-TRAIN_MASK_DIR  = "data/acdc-cleaned/train_split/masks"
-TRAIN_RVIP_DIR  = "data/acdc-cleaned/train_split/rvip"
-
-TEST_IMAGE_DIR  = "data/acdc-cleaned/test_split/images"
-TEST_MASK_DIR   = "data/acdc-cleaned/test_split/masks"
-TEST_RVIP_DIR   = "data/acdc-cleaned/test_split/rvip"
+# Data paths — new ACDC dataset structure
+TRAIN_IMAGE_DIR = "data/acdc/images"
+TRAIN_MASK_DIR  = "data/acdc/masks"
+TRAIN_POINT_DIR = "data/acdc/points"
 
 # Model — 1 input channel (MRI only)
 IN_CHANNELS = 1
@@ -252,8 +248,8 @@ def train(p2_checkpoint=None):
 
     # ── build dataset ─────────────────────────────────────────────────────────
     probe = ACDCLandmarkDataset(
-        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_RVIP_DIR,
-        augment=False, sigma=SIGMA_P1, min_landmark_dist=5
+        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_POINT_DIR,
+        in_channels=IN_CHANNELS, augment=False, sigma=SIGMA_P1,
     )
     n_total = len(probe)
     del probe
@@ -264,14 +260,14 @@ def train(p2_checkpoint=None):
     train_idx, val_idx = idx[n_v:], idx[:n_v]
 
     train_ds = ACDCLandmarkDataset(
-        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_RVIP_DIR,
+        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_POINT_DIR,
         augment=True, sigma=SIGMA_P1, min_landmark_dist=5,
-        n_channels=IN_CHANNELS
+        in_channels=IN_CHANNELS
     )
     val_ds = ACDCLandmarkDataset(
-        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_RVIP_DIR,
+        TRAIN_IMAGE_DIR, TRAIN_MASK_DIR, TRAIN_POINT_DIR,
         augment=False, sigma=SIGMA_P1, min_landmark_dist=5,
-        n_channels=IN_CHANNELS
+        in_channels=IN_CHANNELS
     )
     tl, vl = make_loaders(train_ds, val_ds, train_idx, val_idx)
 
