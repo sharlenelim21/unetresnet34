@@ -12,5 +12,6 @@ tta_results/
 
 data/rv_landmark/
 data/acdc/
-data/mm2-processed/
+
+debug/
 
