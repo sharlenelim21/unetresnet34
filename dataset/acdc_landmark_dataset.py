@@ -1,400 +1,340 @@
 """
-ACDC landmark dataset — loads MRI slices with RV insertion point annotations.
+ACDC landmark dataset — mirrors landmark_dataset.py exactly.
 
-Each __getitem__ returns one 2-D slice that has both LM1 (anterior/superior
-RV insertion point) and LM2 (inferior insertion point, larger y).
+Differences from LandmarkDataset:
+  - Three folders (images, masks, points) share identical filenames
+  - Points are 4-D .nii.gz (H, W, S, 2):
+      channel 0 = LM1 binary mask  (superior/anterior RV insertion point)
+      channel 1 = LM2 binary mask  (inferior RV insertion point)
+  - patient_ids parameter restricts which files are loaded
+  - in_channels=1 → MRI only [1,256,256]
+    in_channels=2 → MRI + seg mask [2,256,256], mask /3 → [0,1]
 """
 
 import os
-import math
-import random
-
+import nibabel as nib
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from scipy.ndimage import zoom as ndimage_zoom, rotate as ndimage_rotate
-import nibabel as nib
+import cv2
 
 from utils.heatmap import coords_to_heatmaps
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# ── augmentation helpers (copied verbatim from landmark_dataset.py) ────────────
 
-def _hist_standardise(img: np.ndarray) -> np.ndarray:
-    """Clip [p1, p99] then z-score normalise. Returns float32."""
-    p1, p99 = np.percentile(img, 1), np.percentile(img, 99)
-    img = np.clip(img, p1, p99)
-    mu, sd = img.mean(), img.std()
-    if sd < 1e-6:
-        return np.zeros_like(img, dtype=np.float32)
-    return ((img - mu) / sd).astype(np.float32)
-
-
-def _resize2d(arr: np.ndarray, target_h: int, target_w: int, order: int) -> np.ndarray:
-    h, w = arr.shape
-    return ndimage_zoom(arr, (target_h / h, target_w / w), order=order).astype(np.float32)
-
-
-def _scale_coord(xy, h_orig, w_orig, H, W):
-    """Scale (x, y) from original voxel space to resized 256×256 space."""
-    return (xy[0] * W / w_orig, xy[1] * H / h_orig)
+def elastic_deform(image, coords, alpha=20, sigma=5, seed=None):
+    rng = np.random.RandomState(seed)
+    H, W = image.shape
+    dx = cv2.GaussianBlur(rng.uniform(-1, 1, (H, W)).astype(np.float32), (0, 0), sigma) * alpha
+    dy = cv2.GaussianBlur(rng.uniform(-1, 1, (H, W)).astype(np.float32), (0, 0), sigma) * alpha
+    x, y = np.meshgrid(np.arange(W), np.arange(H))
+    map_x = np.clip(x + dx, 0, W - 1).astype(np.float32)
+    map_y = np.clip(y + dy, 0, H - 1).astype(np.float32)
+    image_def = cv2.remap(image, map_x, map_y, interpolation=cv2.INTER_LINEAR,
+                          borderMode=cv2.BORDER_REFLECT)
+    new_coords = coords.copy()
+    for i, (cx, cy) in enumerate([(coords[0], coords[1]), (coords[2], coords[3])]):
+        ix = int(np.clip(round(cx), 0, W - 1))
+        iy = int(np.clip(round(cy), 0, H - 1))
+        new_coords[i * 2]     = np.clip(cx + dx[iy, ix], 0, W - 1)
+        new_coords[i * 2 + 1] = np.clip(cy + dy[iy, ix], 0, H - 1)
+    return image_def, new_coords
 
 
-# ---------------------------------------------------------------------------
-# NIfTI landmark loader
-# ---------------------------------------------------------------------------
+def random_crop_resize(image, coords, crop_ratio=0.85):
+    H, W = image.shape
+    ch = int(H * crop_ratio)
+    cw = int(W * crop_ratio)
+    top  = np.random.randint(0, H - ch + 1)
+    left = np.random.randint(0, W - cw + 1)
+    cropped = image[top:top+ch, left:left+cw]
+    resized = cv2.resize(cropped, (W, H))
+    new_coords = coords.copy()
+    new_coords[0] = np.clip((coords[0] - left) * W / cw, 0, W - 1)
+    new_coords[1] = np.clip((coords[1] - top)  * H / ch, 0, H - 1)
+    new_coords[2] = np.clip((coords[2] - left) * W / cw, 0, W - 1)
+    new_coords[3] = np.clip((coords[3] - top)  * H / ch, 0, H - 1)
+    return resized, new_coords
 
-def _load_rvip_nifti(path: str) -> dict:
+
+def random_rotate(image, coords, max_angle=45, M=None):
     """
-    Load a .nii.gz landmark label mask and return
-        { z_index: (lm1_xy, lm2_xy) }
-    where lm1_xy and lm2_xy are (float x, float y) tuples,
-    and lm2 always has the larger y (inferior).
-
-    The volume has the same (H, W, Z) layout as the MRI and mask volumes.
-    Pixel value 1 = LM1, pixel value 2 = LM2, 0 = background.
-    The centroid of each label on each slice is used as the coordinate.
+    Rotate image and coords by a random angle.
+    If M is provided, use it directly (allows applying the same rotation
+    to a second image, e.g. seg mask, without sampling a new angle).
+    Returns (rotated_image, updated_coords, M) so the caller can reuse M.
     """
-    vol = nib.load(path).get_fdata(dtype=np.float32)
-    if vol.ndim == 4:
-        vol = vol[..., 0]
-
-    H, W, Z = vol.shape
-    coords: dict = {}
-
-    for z in range(Z):
-        sl = vol[:, :, z]
-        entry = {}
-        for label in (1, 2):
-            ys, xs = np.where(sl == label)
-            if len(xs):
-                entry[label] = (float(xs.mean()), float(ys.mean()))
-        if 1 in entry and 2 in entry:
-            lm1, lm2 = entry[1], entry[2]
-            if lm1[1] > lm2[1]:    # enforce lm2 = inferior (larger y)
-                lm1, lm2 = lm2, lm1
-            coords[z] = (lm1, lm2)
-
-    return coords
+    H, W = image.shape
+    if M is None:
+        angle = np.random.uniform(-max_angle, max_angle)
+        M = cv2.getRotationMatrix2D((W / 2.0, H / 2.0), angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (W, H), flags=cv2.INTER_LINEAR,
+                              borderMode=cv2.BORDER_REFLECT)
+    new_coords = coords.copy()
+    for i in range(2):
+        px, py = coords[i * 2], coords[i * 2 + 1]
+        nx = M[0, 0] * px + M[0, 1] * py + M[0, 2]
+        ny = M[1, 0] * px + M[1, 1] * py + M[1, 2]
+        new_coords[i * 2]     = np.clip(nx, 0, W - 1)
+        new_coords[i * 2 + 1] = np.clip(ny, 0, H - 1)
+    return rotated, new_coords, M
 
 
-# ---------------------------------------------------------------------------
-# File discovery
-# ---------------------------------------------------------------------------
+# ── per-patient normalisation cache (copied verbatim) ─────────────────────────
 
-def _find_image(directory: str, pid: str, frame: str) -> str | None:
-    """
-    Find the MRI .nii.gz file for patient `pid` and frame ED/ES.
-    Handles naming styles:
-      patient001_frame01.nii.gz  (ED=frame01, ES=frameXX)
-      patient001_ED.nii.gz
-    """
-    tag = frame.upper()
-    best = []
-    for fn in os.listdir(directory):
-        fn_up = fn.upper()
-        if pid.upper() not in fn_up:
-            continue
-        if not fn.endswith(".nii.gz"):
-            continue
-        if "_GT" in fn_up:
-            continue
-        # Frame matching
-        if tag in fn_up:
-            best.append(fn)
-        elif tag == "ED" and "FRAME01" in fn_up and "FRAME01" in fn_up:
-            best.append(fn)
-        elif tag == "ES" and "FRAME" in fn_up and "FRAME01" not in fn_up:
-            best.append(fn)
-    if best:
-        return os.path.join(directory, sorted(best)[0])
-    # Fallback: any non-gt file with this pid
-    for fn in sorted(os.listdir(directory)):
-        if pid.upper() in fn.upper() and fn.endswith(".nii.gz") and "_GT" not in fn.upper():
-            return os.path.join(directory, fn)
-    return None
+class _PatientNormCache:
+    def __init__(self):
+        self._cache = {}
+
+    def get(self, img_path: str, img_array: np.ndarray):
+        if img_path not in self._cache:
+            mu  = img_array.mean()
+            std = img_array.std() + 1e-8
+            self._cache[img_path] = (mu, std)
+        return self._cache[img_path]
 
 
-def _find_mask(directory: str, pid: str, frame: str) -> str | None:
-    tag = frame.upper()
-    best = []
-    for fn in os.listdir(directory):
-        fn_up = fn.upper()
-        if pid.upper() not in fn_up:
-            continue
-        if not fn.endswith(".nii.gz"):
-            continue
-        if "_GT" not in fn_up:
-            continue
-        if tag in fn_up:
-            best.append(fn)
-    if best:
-        return os.path.join(directory, sorted(best)[0])
-    for fn in sorted(os.listdir(directory)):
-        if pid.upper() in fn.upper() and fn.endswith(".nii.gz") and "_GT" in fn.upper():
-            return os.path.join(directory, fn)
-    return None
+_NORM_CACHE = _PatientNormCache()
 
 
-def _find_rvip(directory: str, pid: str, frame: str) -> str | None:
-    """Find the landmark .nii.gz file for patient `pid` and frame ED/ES."""
-    tag = frame.upper()
-    for fn in sorted(os.listdir(directory)):
-        fn_up = fn.upper()
-        if pid.upper() not in fn_up:
-            continue
-        if not fn.endswith(".nii.gz"):
-            continue
-        if tag in fn_up:
-            return os.path.join(directory, fn)
-    # Fallback: first .nii.gz with this pid
-    for fn in sorted(os.listdir(directory)):
-        if pid.upper() in fn.upper() and fn.endswith(".nii.gz"):
-            return os.path.join(directory, fn)
-    return None
-
-
-# ---------------------------------------------------------------------------
-# Dataset
-# ---------------------------------------------------------------------------
+# ── dataset ────────────────────────────────────────────────────────────────────
 
 class ACDCLandmarkDataset(Dataset):
-    """
-    Args:
-        image_dir:   directory of .nii.gz MRI volumes
-        mask_dir:    directory of _gt.nii.gz segmentation masks
-        rvip_dir:    directory of landmark .nii.gz label masks (label 1=LM1, 2=LM2)
-        patient_ids: list of strings like ["patient001", ...]
-        in_channels: 1 = MRI only, 2 = MRI + seg mask
-        augment:     whether to apply data augmentation
-        sigma:       Gaussian heatmap sigma (can be updated via set_sigma)
-        target_size: (H, W) to resize all slices to
-    """
-
-    H = 256
-    W = 256
-
     def __init__(
         self,
-        image_dir: str,
-        mask_dir: str,
-        rvip_dir: str,
-        patient_ids: list,
-        in_channels: int = 1,
-        augment: bool = False,
-        sigma: float = 8.0,
-        target_size: tuple = (256, 256),
+        image_dir,
+        mask_dir,
+        rvip_dir,
+        patient_ids,
+        in_channels=1,
+        augment=False,
+        sigma=8,
+        min_landmark_dist=5,
+        min_slice_variance=0.01,
     ):
-        self.image_dir   = image_dir
-        self.mask_dir    = mask_dir
-        self.rvip_dir    = rvip_dir
-        self.in_channels = in_channels
-        self.augment     = augment
-        self.sigma       = sigma
-        self.H, self.W   = target_size
+        self.image_dir          = image_dir
+        self.mask_dir           = mask_dir
+        self.rvip_dir           = rvip_dir
+        self.patient_ids        = [p.lower() for p in patient_ids]
+        self.in_channels        = in_channels
+        self.augment            = augment
+        self.sigma              = sigma
+        self.min_landmark_dist  = min_landmark_dist
+        self.min_slice_variance = min_slice_variance
 
-        self.slices: list[dict] = []
-        self._build_index(patient_ids)
+        self.samples = self._build_samples()
 
-    # ------------------------------------------------------------------
-    # Index
-    # ------------------------------------------------------------------
+        if len(self.samples) == 0:
+            raise RuntimeError("No valid ACDC samples found. Check paths and patient IDs.")
 
-    def _build_index(self, patient_ids: list):
-        n_missing = n_lowvar = n_close = 0
+        print(f"OK ACDCLandmarkDataset: {len(self.samples)} valid slices "
+              f"(in_channels={in_channels})")
 
-        for pid in patient_ids:
-            for frame in ("ED", "ES"):
-                img_path  = _find_image(self.image_dir, pid, frame)
-                mask_path = _find_mask(self.mask_dir,  pid, frame)
-                rvip_path = _find_rvip(self.rvip_dir,  pid, frame)
-
-                if img_path is None or mask_path is None or rvip_path is None:
-                    continue
-
-                try:
-                    img_vol  = nib.load(img_path).get_fdata(dtype=np.float32)
-                    mask_vol = nib.load(mask_path).get_fdata(dtype=np.float32)
-                    lm_map   = _load_rvip_nifti(rvip_path)
-                except Exception as exc:
-                    print(f"  [skip] {pid}/{frame}: {exc}")
-                    continue
-
-                # Squeeze time dimension if 4-D
-                if img_vol.ndim == 4:
-                    img_vol = img_vol[..., 0]
-                if mask_vol.ndim == 4:
-                    mask_vol = mask_vol[..., 0]
-
-                n_slices = img_vol.shape[2]
-
-                for z in range(n_slices):
-                    if z not in lm_map:
-                        n_missing += 1
-                        continue
-
-                    lm1, lm2 = lm_map[z]          # (x,y) in original voxel space
-                    img_sl   = img_vol[:, :, z]
-
-                    # Variance filter
-                    if float(img_sl.var()) < 0.01:
-                        n_lowvar += 1
-                        continue
-
-                    # Landmark separation filter — compute in 256×256 space
-                    h_orig, w_orig = img_sl.shape
-                    lm1s = _scale_coord(lm1, h_orig, w_orig, self.H, self.W)
-                    lm2s = _scale_coord(lm2, h_orig, w_orig, self.H, self.W)
-                    sep  = math.hypot(lm1s[0] - lm2s[0], lm1s[1] - lm2s[1])
-                    if sep < 10.0:
-                        n_close += 1
-                        continue
-
-                    self.slices.append({
-                        "img_path":  img_path,
-                        "mask_path": mask_path,
-                        "z":         z,
-                        "lm1":       lm1,
-                        "lm2":       lm2,
-                        "h_orig":    h_orig,
-                        "w_orig":    w_orig,
-                    })
-
-        print(
-            f"[ACDCLandmarkDataset] {len(self.slices)} slices "
-            f"| skipped: {n_missing} missing, {n_lowvar} low-var, {n_close} close"
-        )
-
-    # ------------------------------------------------------------------
-    # Augmentation
-    # ------------------------------------------------------------------
-
-    def _augment(self, img, mask, lm1, lm2):
-        """
-        Apply geometric then intensity augmentation.
-        img, mask: float32 numpy (H, W)
-        lm1, lm2: (x, y) in 256×256 space
-        Returns same types.
-        """
-        H, W = img.shape
-
-        # Horizontal flip
-        if random.random() < 0.5:
-            img  = img[:, ::-1].copy()
-            mask = mask[:, ::-1].copy()
-            lm1  = (W - 1 - lm1[0], lm1[1])
-            lm2  = (W - 1 - lm2[0], lm2[1])
-
-        # Vertical flip
-        if random.random() < 0.5:
-            img  = img[::-1, :].copy()
-            mask = mask[::-1, :].copy()
-            lm1  = (lm1[0], H - 1 - lm1[1])
-            lm2  = (lm2[0], H - 1 - lm2[1])
-
-        # Rotation ±30°
-        if random.random() < 0.5:
-            angle   = random.uniform(-30.0, 30.0)
-            img     = ndimage_rotate(img,  angle, reshape=False, order=1, mode="nearest")
-            mask    = ndimage_rotate(mask, angle, reshape=False, order=0, mode="nearest")
-            cx, cy  = W / 2.0, H / 2.0
-            rad     = math.radians(-angle)
-            cos_a, sin_a = math.cos(rad), math.sin(rad)
-
-            def _rot(x, y):
-                dx, dy = x - cx, y - cy
-                nx = cos_a * dx - sin_a * dy + cx
-                ny = sin_a * dx + cos_a * dy + cy
-                return (float(np.clip(nx, 0, W - 1)), float(np.clip(ny, 0, H - 1)))
-
-            lm1 = _rot(*lm1)
-            lm2 = _rot(*lm2)
-
-        # Intensity augmentation (image only)
-        if random.random() < 0.4:       # Gamma
-            gamma = random.uniform(0.7, 1.4)
-            lo, hi = img.min(), img.max()
-            rng = hi - lo
-            if rng > 1e-6:
-                img = ((img - lo) / rng) ** gamma * rng + lo
-
-        if random.random() < 0.4:       # Gaussian noise
-            img = img + np.random.normal(0, random.uniform(0.01, 0.05), img.shape).astype(np.float32)
-
-        if random.random() < 0.4:       # Brightness shift
-            img = img + random.uniform(-0.2, 0.2)
-
-        # Re-standardise after intensity augmentation
-        img = _hist_standardise(img)
-
-        # Re-enforce LM2 = inferior (larger y) after flips
-        if lm1[1] > lm2[1]:
-            lm1, lm2 = lm2, lm1
-
-        return img, mask, lm1, lm2
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def set_sigma(self, sigma: float):
+    def set_sigma(self, sigma):
         self.sigma = sigma
 
+    # ------------------------------------------------------------------
+    # Index building
+    # ------------------------------------------------------------------
+
+    def _patient_files(self):
+        return sorted(
+            fn for fn in os.listdir(self.image_dir)
+            if fn.endswith(".nii.gz")
+            and any(pid in fn.lower() for pid in self.patient_ids)
+        )
+
+    def _build_samples(self):
+        samples = []
+
+        for fname in self._patient_files():
+            img_path  = os.path.join(self.image_dir, fname)
+            mask_path = os.path.join(self.mask_dir,  fname)
+            rvip_path = os.path.join(self.rvip_dir,  fname)
+
+            if not os.path.exists(mask_path) or not os.path.exists(rvip_path):
+                continue
+
+            try:
+                img_vol  = nib.load(img_path).get_fdata().astype(np.float32)
+                mask_vol = nib.load(mask_path).get_fdata().astype(np.float32)
+                pts_vol  = nib.load(rvip_path).get_fdata()   # (H, W, S, 2)
+            except Exception as exc:
+                print(f"  [skip] {fname}: {exc}")
+                continue
+
+            if img_vol.ndim == 4:
+                img_vol  = img_vol[..., 0]
+            if mask_vol.ndim == 4:
+                mask_vol = mask_vol[..., 0]
+
+            if pts_vol.ndim != 4 or pts_vol.shape[3] != 2:
+                print(f"  [skip] {fname}: unexpected points shape {pts_vol.shape}")
+                continue
+
+            H, W, n_slices = img_vol.shape
+
+            for z in range(n_slices):
+                coords = self._extract_points(pts_vol, z)
+                if coords is None:
+                    continue
+
+                # Landmark separation filter (in 256-space)
+                dist = np.linalg.norm([coords[2] - coords[0], coords[3] - coords[1]]) \
+                       * 256 / max(H, W)
+                if dist < self.min_landmark_dist:
+                    continue
+
+                # Variance filter — same logic as LandmarkDataset
+                img_sl = img_vol[:, :, z]
+                mu_s   = img_sl.mean()
+                std_s  = img_sl.std() + 1e-8
+                if ((img_sl - mu_s) / std_s).var() < self.min_slice_variance:
+                    continue
+
+                samples.append((fname, z, coords, H, W))
+
+        return samples
+
+    def _extract_points(self, pts_vol, z):
+        """
+        Extract LM1 and LM2 from pts_vol[:,:,z,:].
+        channel 0 = LM1, channel 1 = LM2 (binary masks, value > 0.5).
+        Returns (x1, y1, x2, y2) float32 in original voxel space,
+        LM1 = superior (smaller y), LM2 = inferior (larger y).
+        Returns None if either landmark is absent.
+        """
+        lm1_mask   = pts_vol[:, :, z, 0]
+        lm1_coords = np.argwhere(lm1_mask > 0.5)   # rows: (row=y, col=x)
+        if len(lm1_coords) == 0:
+            return None
+
+        lm2_mask   = pts_vol[:, :, z, 1]
+        lm2_coords = np.argwhere(lm2_mask > 0.5)
+        if len(lm2_coords) == 0:
+            return None
+
+        lm1_y, lm1_x = lm1_coords.mean(axis=0)
+        lm2_y, lm2_x = lm2_coords.mean(axis=0)
+
+        # Enforce LM1 = superior (smaller y = higher in image)
+        if lm1_y > lm2_y:
+            lm1_x, lm1_y, lm2_x, lm2_y = lm2_x, lm2_y, lm1_x, lm1_y
+
+        return np.array([lm1_x, lm1_y, lm2_x, lm2_y], dtype=np.float32)
+
+    # ------------------------------------------------------------------
+    # Dataset interface
+    # ------------------------------------------------------------------
+
     def __len__(self):
-        return len(self.slices)
+        return len(self.samples)
 
-    def __getitem__(self, idx: int):
-        rec = self.slices[idx]
+    def __getitem__(self, idx):
+        fname, z, coords, H_orig, W_orig = self.samples[idx]
 
-        # Load volumes (re-load each call; could cache if RAM allows)
-        img_vol  = nib.load(rec["img_path"]).get_fdata(dtype=np.float32)
-        mask_vol = nib.load(rec["mask_path"]).get_fdata(dtype=np.float32)
+        img_path  = os.path.join(self.image_dir, fname)
+        mask_path = os.path.join(self.mask_dir,  fname)
+
+        img_vol  = nib.load(img_path).get_fdata().astype(np.float32)
+        mask_vol = nib.load(mask_path).get_fdata().astype(np.float32)
         if img_vol.ndim  == 4: img_vol  = img_vol[...,  0]
         if mask_vol.ndim == 4: mask_vol = mask_vol[..., 0]
 
-        z = rec["z"]
-        img_sl  = img_vol[:, :, z]
-        mask_sl = mask_vol[:, :, z]
-        h_orig, w_orig = rec["h_orig"], rec["w_orig"]
+        img_2d  = img_vol[:,  :, z]
+        mask_2d = mask_vol[:, :, z]
 
-        # Resize to 256×256
-        img_sl  = _resize2d(img_sl,  self.H, self.W, order=1)
-        mask_sl = _resize2d(mask_sl, self.H, self.W, order=0)
-
-        # Standardise
-        img_sl = _hist_standardise(img_sl)
+        # Per-patient normalisation (same as LandmarkDataset)
+        mu, std   = _NORM_CACHE.get(img_path, img_vol)
+        image_res = cv2.resize(img_2d, (256, 256))
+        image_res = (image_res - mu) / std
 
         # Scale coords to 256×256 space
-        lm1 = _scale_coord(rec["lm1"], h_orig, w_orig, self.H, self.W)
-        lm2 = _scale_coord(rec["lm2"], h_orig, w_orig, self.H, self.W)
+        x1, y1, x2, y2 = coords
+        x1 = x1 * 256 / W_orig;  x2 = x2 * 256 / W_orig
+        y1 = y1 * 256 / H_orig;  y2 = y2 * 256 / H_orig
+        coords_scaled = np.array([x1, y1, x2, y2], dtype=np.float32)
 
-        # Augmentation
+        # Resize seg mask to 256×256 before augmentation so geometric transforms
+        # can be applied to both channels with the same parameters.
+        mask_res = cv2.resize(mask_2d, (256, 256),
+                              interpolation=cv2.INTER_NEAREST).astype(np.float32)
+
+        # Augmentation — geometric ops applied identically to image AND mask.
         if self.augment:
-            img_sl, mask_sl, lm1, lm2 = self._augment(img_sl, mask_sl, lm1, lm2)
+            # Horizontal flip
+            if np.random.rand() < 0.5:
+                image_res        = np.fliplr(image_res).copy()
+                mask_res         = np.fliplr(mask_res).copy()
+                coords_scaled[0] = 255 - coords_scaled[0]
+                coords_scaled[2] = 255 - coords_scaled[2]
 
-        # Clamp to image bounds
-        lm1 = (float(np.clip(lm1[0], 0, self.W - 1)), float(np.clip(lm1[1], 0, self.H - 1)))
-        lm2 = (float(np.clip(lm2[0], 0, self.W - 1)), float(np.clip(lm2[1], 0, self.H - 1)))
+            # Vertical flip
+            if np.random.rand() < 0.5:
+                image_res        = np.flipud(image_res).copy()
+                mask_res         = np.flipud(mask_res).copy()
+                coords_scaled[1] = 255 - coords_scaled[1]
+                coords_scaled[3] = 255 - coords_scaled[3]
+
+            # Rotation — sample M once, apply to both image and mask (Issue 6)
+            if np.random.rand() < 0.7:
+                image_res, coords_scaled, M = random_rotate(
+                    image_res, coords_scaled, max_angle=45
+                )
+                # Apply the exact same rotation matrix to the seg mask
+                H_r, W_r = mask_res.shape
+                mask_res = cv2.warpAffine(mask_res, M, (W_r, H_r),
+                                          flags=cv2.INTER_NEAREST,
+                                          borderMode=cv2.BORDER_REFLECT)
+
+            # Intensity-only augmentations (image only, mask unchanged)
+            if np.random.rand() < 0.5:
+                image_res = image_res * np.random.uniform(0.8, 1.2) \
+                          + np.random.uniform(-0.1, 0.1)
+            if np.random.rand() < 0.3:
+                image_res = image_res \
+                          + np.random.randn(*image_res.shape).astype(np.float32) * 0.05
+
+            # Elastic deform — apply to image only (mask stays with original pixels)
+            if np.random.rand() < 0.4:
+                image_res, coords_scaled = elastic_deform(
+                    image_res, coords_scaled, alpha=15, sigma=4
+                )
+
+            # Crop-resize — apply to both
+            if np.random.rand() < 0.4:
+                cr = np.random.uniform(0.80, 0.95)
+                image_res, coords_scaled = random_crop_resize(
+                    image_res, coords_scaled, crop_ratio=cr
+                )
+                H_m, W_m = mask_res.shape
+                ch = int(H_m * cr);  cw = int(W_m * cr)
+                top  = np.random.randint(0, H_m - ch + 1)
+                left = np.random.randint(0, W_m - cw + 1)
+                mask_res = cv2.resize(mask_res[top:top+ch, left:left+cw],
+                                      (W_m, H_m), interpolation=cv2.INTER_NEAREST)
+
+            # Re-enforce LM1=superior after ALL geometric augmentations (Issue 5)
+            if coords_scaled[1] > coords_scaled[3]:
+                coords_scaled = np.array([
+                    coords_scaled[2], coords_scaled[3],
+                    coords_scaled[0], coords_scaled[1],
+                ], dtype=np.float32)
+
+        coords_scaled = np.clip(coords_scaled, 0, 255)
 
         # Build image tensor
-        img_t = torch.from_numpy(img_sl).unsqueeze(0)          # [1, H, W]
         if self.in_channels == 2:
-            mask_t = torch.from_numpy(mask_sl / 3.0).unsqueeze(0)  # [1, H, W]
-            image_out = torch.cat([img_t, mask_t], dim=0)           # [2, H, W]
+            mask_norm = (mask_res / 3.0).astype(np.float32)
+            image_out = np.stack([image_res.astype(np.float32), mask_norm], axis=0)
         else:
-            image_out = img_t                                        # [1, H, W]
+            image_out = np.expand_dims(image_res.astype(np.float32), axis=0)
 
-        # Coords tensor [4]: x1, y1, x2, y2
-        coords = torch.tensor([lm1[0], lm1[1], lm2[0], lm2[1]], dtype=torch.float32)
+        heatmaps = coords_to_heatmaps(coords_scaled, (256, 256), sigma=self.sigma)
 
-        # Heatmaps [2, H, W]  — note: coords_to_heatmaps takes image_shape=(H,W)
-        heatmaps = coords_to_heatmaps(
-            coords.numpy(),
-            image_shape=(self.H, self.W),
-            sigma=self.sigma,
+        return (
+            torch.tensor(image_out,     dtype=torch.float32),
+            torch.tensor(heatmaps,      dtype=torch.float32),
+            torch.tensor(coords_scaled, dtype=torch.float32),
         )
-        heatmaps = torch.from_numpy(heatmaps)   # [2, H, W]
-
-        return image_out, heatmaps, coords

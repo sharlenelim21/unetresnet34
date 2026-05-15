@@ -1,603 +1,613 @@
-"""
-Train UNetResNet34 on ACDC — 1-channel (MRI only).
-3-phase curriculum: warmup → curriculum (sigma decay + mixup) → precision.
-
-Checkpoints saved to: acdc-checkpoints/acdc_1ch_TIMESTAMP/
-"""
-
-# ── only these two lines differ between train_acdc_1ch.py and train_acdc_2ch.py ──
+# ── the only two lines that differ between train_acdc_1ch.py and train_acdc_2ch.py ──
 IN_CHANNELS = 1
 RUN_TAG     = "acdc_1ch"
-# ─────────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────────
 
-import os, json, math, random, time
-from datetime import datetime
-
-import numpy as np
+import os, json, time
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as F_nn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
+import numpy as np
+from datetime import datetime
 
 from dataset.acdc_landmark_dataset import ACDCLandmarkDataset
 from models.unet_resnet34 import UNetResNet34
 from utils.loss import HeatmapLoss
 from utils.postprocess import gaussian_subpixel_argmax
-from utils.metrics import (
-    compute_mre, compute_mre_per_landmark,
-    compute_sdr_multi, compute_per_sample_mre, compute_mre_percentiles,
-)
+from utils.metrics import (compute_mre, compute_mre_per_landmark,
+                           compute_sdr_multi, compute_per_sample_mre,
+                           compute_mre_percentiles)
 from utils.visualize import save_epoch_grid, save_training_curve
 
-# ─────────────────────────────── config ───────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 IMAGE_DIR = "data/acdc/images"
 MASK_DIR  = "data/acdc/masks"
-RVIP_DIR  = "data/acdc/points"    # landmark .nii.gz label masks (1=LM1, 2=LM2)
+RVIP_DIR  = "data/acdc/points"
 
 TRAIN_IDS = [f"patient{i:03d}" for i in range(1,  81)]
 VAL_IDS   = [f"patient{i:03d}" for i in range(81, 91)]
 TEST_IDS  = [f"patient{i:03d}" for i in range(91, 101)]
 
-BATCH_SIZE   = 8
-NUM_WORKERS  = 2
-SEED         = 42
-GRAD_CLIP    = 2.0
+BATCH_SIZE = 8
+SEED       = 42
+N_VIS      = 8
+
+P1_EPOCHS = 6
+P2_EPOCHS = 49
+P3_EPOCHS = 35
+
+LR_HEAD_P1     = 1e-3
+LR_HEAD_P2     = 1e-3
+LR_BACKBONE_P2 = 5e-5
+LR_P3          = 3e-5
+
+SIGMA_P1       = 12.0
+SIGMA_START    = 12.0
+SIGMA_END      = 2.0
+SIGMA_P3_START = 2.0
+SIGMA_P3_END   = 1.2
+
+MIXUP_ALPHA  = 0.2
+MIXUP_PROB   = 0.3
 WEIGHT_DECAY = 1e-4
-N_VIS        = 8
 
-P1_EPOCHS    = 6
-P2_EPOCHS    = 50
-P3_EPOCHS    = 50
+AUX_WEIGHT_MAX = 0.4
+AUX_WEIGHT_MIN = 0.05
 
-SIGMA_P1     = 12.0
-SIGMA_P2_END = 2.0
-SIGMA_P3_END = 1.0
+EARLY_STOP_P2 = 18
+EARLY_STOP_P3 = 18
 
-LOSS_KWARGS = dict(
-    coord_weight = 20.0,
-    sep_weight   = 0.5,
-    sep_min_dist = 0.08,
-    wing_w       = 0.008,
-    wing_eps     = 0.002,
-    lm_weights   = [2.0, 1.0],
-    hard_k       = 6,
-)
-# ──────────────────────────────────────────────────────────────────────────────
+COORD_WEIGHT = 15.0
+LM_WEIGHTS   = [2.5, 1.0]
+HARD_K       = BATCH_SIZE - 2
+
+CARDIAC_PRETRAINED = False
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-def seed_everything(seed: int):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+def seed_worker(worker_id):
+    np.random.seed(SEED + worker_id)
 
 
-# ─────────────────────── encoder freeze / unfreeze ────────────────────────────
-_ENC = {"enc0", "enc1", "enc2", "enc3", "enc4"}
-_HEAD = {"final", "aux_head1", "aux_head2"}
+def sigma_p2(ep, total):
+    t = min(ep / total, 1.0)
+    t_cos = (1.0 - np.cos(np.pi * t)) / 2.0
+    return SIGMA_START + t_cos * (SIGMA_END - SIGMA_START)
 
 
-def _enc_param_names(model):
-    return {n for n, _ in model.named_parameters() if n.split(".")[0] in _ENC}
+def aux_weight(sigma):
+    t = np.clip((sigma - 2.0) / (15.0 - 2.0), 0, 1)
+    return AUX_WEIGHT_MIN + t * (AUX_WEIGHT_MAX - AUX_WEIGHT_MIN)
 
 
-def freeze_encoder(model):
-    for name, p in model.named_parameters():
-        if name.split(".")[0] in _ENC:
-            p.requires_grad_(False)
+def set_encoder_grad(model, flag):
+    for n, p in model.named_parameters():
+        if any(n.startswith(x) for x in ["enc0", "enc1", "enc2", "enc3", "enc4"]):
+            p.requires_grad = flag
 
 
-def unfreeze_encoder_bn(model):
-    """Unfreeze only BN layers inside the encoder; conv weights stay frozen."""
-    for name, mod in model.named_modules():
-        if name.split(".")[0] in _ENC and isinstance(mod, (nn.BatchNorm2d, nn.BatchNorm1d)):
-            for p in mod.parameters():
-                p.requires_grad_(True)
+def mixup(images, heatmaps, alpha=0.2):
+    lam = np.random.beta(alpha, alpha)
+    idx = torch.randperm(images.size(0), device=images.device)
+    return (lam * images   + (1 - lam) * images[idx],
+            lam * heatmaps + (1 - lam) * heatmaps[idx])
 
-
-def unfreeze_all(model):
-    for p in model.parameters():
-        p.requires_grad_(True)
-
-
-def p3_param_groups(model):
-    enc, dec, head = [], [], []
-    for name, p in model.named_parameters():
-        top = name.split(".")[0]
-        if top in _ENC:
-            enc.append(p)
-        elif top in _HEAD or "final" in name:
-            head.append(p)
-        else:
-            dec.append(p)
-    return [
-        {"params": enc,  "lr": 5e-6},
-        {"params": dec,  "lr": 5e-5},
-        {"params": head, "lr": 1e-4},
-    ]
-
-
-# ──────────────────────────── schedules ───────────────────────────────────────
-
-def cosine_anneal(start, end, step, total):
-    frac = step / max(total - 1, 1)
-    return end + 0.5 * (start - end) * (1.0 + math.cos(math.pi * frac))
-
-
-# ──────────────────────────────── TTA ─────────────────────────────────────────
 
 @torch.no_grad()
-def tta_predict(model, images, device):
-    """
-    4-variant TTA: original, h-flip, v-flip, h+v-flip.
-    Flips are undone before averaging so all heatmaps are in the same space.
-    Returns averaged coords [B, 4] and averaged heatmap [B, 2, H, W].
-    """
-    images = images.to(device)
-    variants = [
-        images,
-        torch.flip(images, [3]),
-        torch.flip(images, [2]),
-        torch.flip(images, [2, 3]),
-    ]
-    hms = []
-    for v in variants:
-        out = model(v)
-        # ResNetUNet.forward returns a plain tensor (aux stored as attributes)
-        if isinstance(out, (tuple, list)):
-            out = out[0]
-        hms.append(torch.sigmoid(out))
-
-    # Undo spatial flips
-    hms[1] = torch.flip(hms[1], [3])
-    hms[2] = torch.flip(hms[2], [2])
-    hms[3] = torch.flip(hms[3], [2, 3])
-
-    avg_hm = torch.stack(hms).mean(0)                  # [B, 2, H, W]
-    coords = gaussian_subpixel_argmax(avg_hm)           # [B, 4]
-    return coords, avg_hm
+def tta_predict(model, image):
+    preds = []
+    preds.append(torch.sigmoid(model(image)))
+    p = torch.sigmoid(model(torch.flip(image, [3])))
+    preds.append(torch.flip(p, [3]))
+    p = torch.sigmoid(model(torch.flip(image, [2])))
+    preds.append(torch.flip(p, [2]))
+    return torch.stack(preds).mean(0)
 
 
-def enforce_superior(coords: torch.Tensor) -> torch.Tensor:
-    """Swap LM1/LM2 whenever LM1 has a larger y than LM2."""
-    c = coords.clone()
-    swap = c[:, 1] > c[:, 3]          # y1 > y2 → LM1 is not superior
-    c[swap, 0], c[swap, 2] = coords[swap, 2].clone(), coords[swap, 0].clone()
-    c[swap, 1], c[swap, 3] = coords[swap, 3].clone(), coords[swap, 1].clone()
-    return c
-
-
-# ─────────────────────────── mixup ────────────────────────────────────────────
-
-def mixup(images, heatmaps, coords, alpha=0.2):
-    lam = float(np.random.beta(alpha, alpha))
-    idx = torch.randperm(images.size(0), device=images.device)
-    return (
-        lam * images   + (1 - lam) * images[idx],
-        lam * heatmaps + (1 - lam) * heatmaps[idx],
-        lam * coords   + (1 - lam) * coords[idx],
-    )
-
-
-# ────────────────────── current LR helper ─────────────────────────────────────
-
-def current_lr(optimizer):
-    return optimizer.param_groups[0]["lr"]
-
-
-# ─────────────────────── training epoch ───────────────────────────────────────
-
-def train_epoch(model, loader, optimizer, criterion, scaler, device, use_amp,
-                mixup_prob=0.0):
+def train_epoch(model, loader, opt, criterion, device,
+                sigma, do_mixup, do_aux, aw, scaler, use_amp, clip=5.0):
     model.train()
-    total_loss = 0.0
-    for imgs, hms, coords in loader:
-        imgs, hms, coords = imgs.to(device), hms.to(device), coords.to(device)
-        if mixup_prob > 0 and random.random() < mixup_prob:
-            imgs, hms, coords = mixup(imgs, hms, coords)
+    tot      = 0.0
+    n_finite = 0
+    subs     = {"bce": 0.0, "dice": 0.0, "coord": 0.0, "sep": 0.0}
 
-        optimizer.zero_grad(set_to_none=True)
+    has_aux = do_aux and hasattr(model, "aux_head1") and hasattr(model, "_aux_feat1")
+
+    for imgs, hms, _ in loader:
+        imgs = imgs.to(device)
+        hms  = hms.to(device)
+
+        if do_mixup and np.random.rand() < MIXUP_PROB:
+            imgs, hms = mixup(imgs, hms, MIXUP_ALPHA)
+
+        opt.zero_grad(set_to_none=True)
+
         with autocast(enabled=use_amp):
-            out = model(imgs)
-            if isinstance(out, (tuple, list)):
-                out = out[0]
-            loss, _ = criterion(out, hms)
+            logits = model(imgs)
+            # fp32 loss — avoids AMP precision issues in BCEWithLogitsLoss
+            loss, parts = criterion(logits.float(), hms.float())
 
-            # Deep supervision via aux attributes (if the model has them)
-            for attr in ("_aux_feat1", "_aux_feat2"):
-                feat = getattr(model, attr, None)
-                if feat is not None:
-                    head_name = "aux_head1" if "1" in attr else "aux_head2"
-                    head = getattr(model, head_name, None)
-                    if head is not None:
-                        a_out = head(feat)
-                        tgt   = F.interpolate(hms, size=a_out.shape[2:],
-                                              mode="bilinear", align_corners=False)
-                        a_loss, _ = criterion(a_out, tgt)
-                        loss = loss + 0.3 * a_loss
+            if has_aux and model._aux_feat1 is not None:
+                out1 = model.aux_head1(model._aux_feat1)
+                out2 = model.aux_head2(model._aux_feat2)
+                hm1  = F_nn.interpolate(hms, size=out1.shape[2:],
+                                        mode="bilinear", align_corners=False)
+                hm2  = F_nn.interpolate(hms, size=out2.shape[2:],
+                                        mode="bilinear", align_corners=False)
+                a1, _ = criterion(out1.float(), hm1.float())
+                a2, _ = criterion(out2.float(), hm2.float())
+                loss   = loss + aw * (a1 + a2)
+
+        # Skip non-finite batches — guards against early NaN spikes
+        if not torch.isfinite(loss):
+            opt.zero_grad(set_to_none=True)
+            continue
 
         if use_amp:
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
-            scaler.step(optimizer)
+            scaler.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+            scaler.step(opt)
             scaler.update()
         else:
             loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
-            optimizer.step()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+            opt.step()
 
-        total_loss += loss.item() * imgs.size(0)
+        tot      += loss.item()
+        n_finite += 1
+        for k in subs:
+            subs[k] += parts[k]
 
-    return total_loss / len(loader.dataset)
+    n = max(n_finite, 1)
+    return tot / n, {k: v / n for k, v in subs.items()}
 
 
-# ─────────────────────────── validation ───────────────────────────────────────
+def _enforce_and_match(pc_np, gt_np):
+    """
+    For a single sample (both shape [4]):
+    1. Enforce LM1=superior (smaller y) on the prediction.
+    2. Check normal vs swapped assignment against GT; keep the lower-error order.
+    Returns corrected pred as float32 numpy [4].
+    """
+    p = pc_np.copy()
+    # Step 1 — enforce superior ordering on prediction
+    if p[1] > p[3]:
+        p = np.array([p[2], p[3], p[0], p[1]], dtype=np.float32)
+    # Step 2 — optimal matching: compare normal vs swapped vs GT
+    g = gt_np
+    e_normal  = np.linalg.norm(p[:2] - g[:2]) + np.linalg.norm(p[2:] - g[2:])
+    p_swap    = np.array([p[2], p[3], p[0], p[1]], dtype=np.float32)
+    e_swapped = np.linalg.norm(p_swap[:2] - g[:2]) + np.linalg.norm(p_swap[2:] - g[2:])
+    return p_swap if e_swapped < e_normal else p
+
 
 @torch.no_grad()
-def validate(model, loader, device, criterion, epoch, grid_dir):
+def validate(model, loader, criterion, device, sigma):
     model.eval()
-    total_loss  = 0.0
-    all_preds, all_gts, all_imgs = [], [], []
+    vl = mr = mr1 = mr2 = 0.0
+    sdr = {2: 0.0, 5: 0.0, 10: 0.0}
+    vis_i, vis_p, vis_g = [], [], []
     sample_mres = []
 
-    for imgs, hms, coords in loader:
-        imgs   = imgs.to(device)
-        hms_d  = hms.to(device)
+    for imgs, hms, gts in loader:
+        imgs = imgs.to(device)
+        hms  = hms.to(device)
+        gts  = gts.to(device)
 
-        pred_coords, avg_hm = tta_predict(model, imgs, device)
-        pred_coords = enforce_superior(pred_coords.cpu())
+        loss, _ = criterion(model(imgs).float(), hms.float())
+        vl += loss.item()
 
-        # Approximate val loss from averaged probabilities
-        log_hm = torch.log(avg_hm.clamp(1e-6, 1 - 1e-6))
-        loss, _ = criterion(log_hm, hms_d)
-        total_loss += loss.item() * imgs.size(0)
+        ph = tta_predict(model, imgs)
+        pc = gaussian_subpixel_argmax(ph, window=7)   # [B, 4] on device
 
-        per_s = compute_per_sample_mre(pred_coords, coords)
-        sample_mres.extend(per_s.tolist())
+        # Apply ordering + optimal matching per sample (Issue 7)
+        pc_np  = pc.cpu().numpy()
+        gt_np  = gts.cpu().numpy()
+        pc_matched = np.stack([
+            _enforce_and_match(pc_np[b], gt_np[b]) for b in range(pc_np.shape[0])
+        ])
+        pc_matched = torch.tensor(pc_matched, dtype=torch.float32).to(gts.device)
 
-        all_preds.extend(pred_coords.numpy())
-        all_gts.extend(coords.numpy())
-        all_imgs.extend(imgs[:, 0].cpu().numpy())   # first channel for vis
+        mr  += compute_mre(pc_matched, gts).item()
+        m1, m2 = compute_mre_per_landmark(pc_matched, gts)
+        mr1 += m1;  mr2 += m2
+        s = compute_sdr_multi(pc_matched, gts, (2.0, 5.0, 10.0))
+        for t in sdr:
+            sdr[t] += s[t]
+        sample_mres.extend(compute_per_sample_mre(pc_matched, gts).cpu().tolist())
 
-    avg_loss = total_loss / len(loader.dataset)
-    pred_t   = torch.tensor(np.array(all_preds))
-    gt_t     = torch.tensor(np.array(all_gts))
+        if len(vis_i) < N_VIS:
+            vis_i.append(imgs[0, 0].cpu().numpy())
+            vis_p.append(pc_matched[0].cpu().numpy())
+            vis_g.append(gts[0].cpu().numpy())
 
-    mre           = compute_mre(pred_t, gt_t).item()
-    mre_lm1, mre_lm2 = compute_mre_per_landmark(pred_t, gt_t)
-    sdr           = compute_sdr_multi(pred_t, gt_t, thresholds=(2, 5, 10))
-    pct           = compute_mre_percentiles(sample_mres)
+    n   = len(loader)
+    pct = compute_mre_percentiles(sample_mres)
+    return {
+        "val_loss": vl / n,
+        "mre":      mr / n,
+        "mre1":     mr1 / n,
+        "mre2":     mr2 / n,
+        "sdr":      {t: sdr[t] / n for t in sdr},
+        "pct":      pct,
+        "vis":      (vis_i, vis_p, vis_g),
+    }
 
-    save_epoch_grid(
-        all_imgs[:N_VIS], all_preds[:N_VIS], all_gts[:N_VIS],
-        epoch, grid_dir, n_samples=N_VIS,
-    )
-
-    return avg_loss, mre, mre_lm1, mre_lm2, sdr, pct
-
-
-# ─────────────────────────── test evaluation ──────────────────────────────────
 
 @torch.no_grad()
-def evaluate_test(model, device):
-    ds = ACDCLandmarkDataset(
+def evaluate_test(model, device, criterion):
+    test_ds = ACDCLandmarkDataset(
         IMAGE_DIR, MASK_DIR, RVIP_DIR,
         patient_ids=TEST_IDS,
         in_channels=IN_CHANNELS,
         augment=False,
         sigma=SIGMA_P3_END,
     )
-    loader = DataLoader(ds, batch_size=BATCH_SIZE, shuffle=False,
-                        num_workers=NUM_WORKERS, pin_memory=True)
+    loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False,
+                        num_workers=2, pin_memory=True)
     model.eval()
-    all_preds, all_gts, sample_mres = [], [], []
-    for imgs, _, coords in loader:
-        pred_coords, _ = tta_predict(model, imgs, device)
-        pred_coords = enforce_superior(pred_coords.cpu())
-        sample_mres.extend(compute_per_sample_mre(pred_coords, coords).tolist())
-        all_preds.extend(pred_coords.numpy())
-        all_gts.extend(coords.numpy())
+    mr = mr1 = mr2 = 0.0
+    sdr = {2: 0.0, 5: 0.0, 10: 0.0}
+    sample_mres = []
 
-    pred_t = torch.tensor(np.array(all_preds))
-    gt_t   = torch.tensor(np.array(all_gts))
-    mre              = compute_mre(pred_t, gt_t).item()
-    mre_lm1, mre_lm2 = compute_mre_per_landmark(pred_t, gt_t)
-    sdr              = compute_sdr_multi(pred_t, gt_t, thresholds=(2, 5, 10))
-    pct              = compute_mre_percentiles(sample_mres)
-    return mre, mre_lm1, mre_lm2, sdr, pct
+    for imgs, hms, gts in loader:
+        imgs = imgs.to(device)
+        gts  = gts.to(device)
+        ph   = tta_predict(model, imgs)
+        pc   = gaussian_subpixel_argmax(ph, window=7)
+        mr  += compute_mre(pc, gts).item()
+        m1, m2 = compute_mre_per_landmark(pc, gts)
+        mr1 += m1;  mr2 += m2
+        s = compute_sdr_multi(pc, gts, (2.0, 5.0, 10.0))
+        for t in sdr:
+            sdr[t] += s[t]
+        sample_mres.extend(compute_per_sample_mre(pc, gts).cpu().tolist())
+
+    n   = len(loader)
+    pct = compute_mre_percentiles(sample_mres)
+    return {
+        "mre":  mr / n,
+        "mre1": mr1 / n,
+        "mre2": mr2 / n,
+        "sdr":  {t: sdr[t] / n for t in sdr},
+        "pct":  pct,
+    }
 
 
-# ─────────────────────────── JSON logging ─────────────────────────────────────
-
-def save_epoch_log(run_dir, log_entry):
+def save_epoch_log(run_dir, entry):
     path = os.path.join(run_dir, "training_log.json")
-    entries = []
-    if os.path.exists(path):
-        with open(path) as f:
-            entries = json.load(f)
-    entries.append(log_entry)
+    log  = json.load(open(path)) if os.path.exists(path) else []
+    log.append(entry)
     with open(path, "w") as f:
-        json.dump(entries, f, indent=2)
+        json.dump(log, f, indent=2)
 
 
-# ──────────────────────────────── main ────────────────────────────────────────
-
-def main():
-    seed_everything(SEED)
+def train(p2_checkpoint=None):
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark     = False
 
     device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     use_amp = device.type == "cuda"
     scaler  = GradScaler(enabled=use_amp)
+    print(f"Device: {device}  AMP: {use_amp}  in_channels: {IN_CHANNELS}")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir   = os.path.join("acdc-checkpoints", f"{RUN_TAG}_{timestamp}")
-    grid_dir  = os.path.join(run_dir, "grids")
-    os.makedirs(grid_dir, exist_ok=True)
-
-    print(f"\nRun    : {run_dir}")
-    print(f"Device : {device}  |  AMP : {use_amp}")
-    print(f"Channels: {IN_CHANNELS}")
-
-    # ── save config.json ──────────────────────────────────────────────────────
-    config = {
-        "in_channels": IN_CHANNELS,
-        "batch_size":  BATCH_SIZE,
-        "seed":        SEED,
-        "image_dir":   IMAGE_DIR,
-        "mask_dir":    MASK_DIR,
-        "rvip_dir":    RVIP_DIR,
-        "train_patients": TRAIN_IDS,
-        "val_patients":   VAL_IDS,
-        "test_patients":  TEST_IDS,
-        "phases": {
-            "p1": {"epochs": P1_EPOCHS,  "lr": 5e-4,  "sigma": SIGMA_P1},
-            "p2": {"epochs": P2_EPOCHS,  "lr_head": 2e-4, "lr_bn": 1e-5,
-                   "sigma_start": SIGMA_P1, "sigma_end": SIGMA_P2_END, "early_stop": 15},
-            "p3": {"epochs": P3_EPOCHS,  "lr_enc": 5e-6,  "lr_dec": 5e-5, "lr_head": 1e-4,
-                   "sigma_start": SIGMA_P2_END, "sigma_end": SIGMA_P3_END, "early_stop": 20},
-        },
-        "loss": {
-            "coord_weight": LOSS_KWARGS["coord_weight"],
-            "sep_weight":   LOSS_KWARGS["sep_weight"],
-            "lm_weights":   LOSS_KWARGS["lm_weights"],
-            "hard_k":       LOSS_KWARGS["hard_k"],
-        },
-    }
-    with open(os.path.join(run_dir, "config.json"), "w") as f:
-        json.dump(config, f, indent=2)
+    ts       = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    run_dir   = os.path.join("acdc-checkpoints", f"{RUN_TAG}_{ts}")
+    grids_dir = os.path.join(run_dir, "grids")
+    os.makedirs(run_dir,   exist_ok=True)
+    os.makedirs(grids_dir, exist_ok=True)
 
     # ── datasets ──────────────────────────────────────────────────────────────
     train_ds = ACDCLandmarkDataset(
         IMAGE_DIR, MASK_DIR, RVIP_DIR,
         patient_ids=TRAIN_IDS, in_channels=IN_CHANNELS,
-        augment=True, sigma=SIGMA_P1,
+        augment=True,  sigma=SIGMA_P1,
     )
     val_ds = ACDCLandmarkDataset(
         IMAGE_DIR, MASK_DIR, RVIP_DIR,
         patient_ids=VAL_IDS, in_channels=IN_CHANNELS,
         augment=False, sigma=SIGMA_P1,
     )
-    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
-                              num_workers=NUM_WORKERS, pin_memory=True, drop_last=True)
-    val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False,
-                              num_workers=NUM_WORKERS, pin_memory=True)
+
+    g = torch.Generator()
+    g.manual_seed(SEED)
+    tl = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
+                    num_workers=2, pin_memory=True,
+                    worker_init_fn=seed_worker, generator=g)
+    vl = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False,
+                    num_workers=2, pin_memory=True,
+                    worker_init_fn=seed_worker)
 
     # ── model ─────────────────────────────────────────────────────────────────
-    model     = UNetResNet34(in_channels=IN_CHANNELS, num_classes=2, pretrained=True).to(device)
-    criterion = HeatmapLoss(**LOSS_KWARGS)
+    model = UNetResNet34(in_channels=IN_CHANNELS, num_classes=2, dropout=0.2,
+                         pretrained=True,
+                         cardiac_pretrained=CARDIAC_PRETRAINED).to(device)
+    has_aux = hasattr(model, "aux_head1")
+    print(f"Deep supervision: {'enabled' if has_aux else 'disabled'}")
 
-    # history for save_training_curve (needs: epoch, train_loss, val_loss, mre, sdr, sigma)
-    curve_history = []
+    crit = HeatmapLoss(
+        coord_weight=COORD_WEIGHT,
+        sep_weight=1.0,
+        sep_min_dist=0.08,
+        wing_w=0.04,
+        wing_eps=0.008,
+        lm_weights=LM_WEIGHTS,
+        hard_k=HARD_K,
+    )
+    crit_p3 = HeatmapLoss(
+        coord_weight=25.0,
+        sep_weight=0.3,
+        sep_min_dist=0.08,
+        wing_w=0.008,
+        wing_eps=0.002,
+        lm_weights=LM_WEIGHTS,
+        hard_k=HARD_K,
+    )
 
-    best_p90_p2    = float("inf")
-    best_p90_p3    = float("inf")
-    no_improve_p2  = 0
-    no_improve_p3  = 0
-    global_epoch   = 0
-    best_epoch     = 0
+    # ── config.json ───────────────────────────────────────────────────────────
+    config = {
+        "run_tag": RUN_TAG, "in_channels": IN_CHANNELS,
+        "image_dir": IMAGE_DIR, "mask_dir": MASK_DIR, "rvip_dir": RVIP_DIR,
+        "train_ids": TRAIN_IDS, "val_ids": VAL_IDS, "test_ids": TEST_IDS,
+        "batch_size": BATCH_SIZE, "seed": SEED,
+        "p1": {"epochs": P1_EPOCHS, "lr": LR_HEAD_P1, "sigma": SIGMA_P1},
+        "p2": {"epochs": P2_EPOCHS, "lr_head": LR_HEAD_P2,
+               "lr_backbone": LR_BACKBONE_P2,
+               "sigma_start": SIGMA_START, "sigma_end": SIGMA_END,
+               "early_stop": EARLY_STOP_P2},
+        "p3": {"epochs": P3_EPOCHS, "lr": LR_P3,
+               "sigma_start": SIGMA_P3_START, "sigma_end": SIGMA_P3_END,
+               "early_stop": EARLY_STOP_P3},
+        "loss_p1p2": {"coord_weight": COORD_WEIGHT, "wing_w": 0.04,
+                      "wing_eps": 0.008, "lm_weights": LM_WEIGHTS},
+        "loss_p3":   {"coord_weight": 25.0, "wing_w": 0.008,
+                      "wing_eps": 0.002, "lm_weights": LM_WEIGHTS},
+    }
+    with open(os.path.join(run_dir, "config.json"), "w") as f:
+        json.dump(config, f, indent=2)
 
-    best_p2_path    = os.path.join(run_dir, "best_p2.pth")
-    best_model_path = os.path.join(run_dir, "best_model.pth")
-    last_model_path = os.path.join(run_dir, "last_model.pth")
+    history    = []
+    best_score = float("inf")   # P90 MRE, used for P2 checkpointing
+    best_mre   = float("inf")   # P90 MRE at end of P2, baseline for P3
+    best_val_mre  = float("inf")
+    best_val_sdr5 = 0.0
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # Phase 1 — Warmup
-    # ══════════════════════════════════════════════════════════════════════════
-    print("\n" + "=" * 62)
-    print("PHASE 1 — Warmup  (decoder + head only, encoder frozen)")
-    print("=" * 62)
+    if p2_checkpoint is None:
+        # ═════════════════════════════════════════════════════════════════════
+        # PHASE 1 — warmup, frozen encoder
+        # ═════════════════════════════════════════════════════════════════════
+        print(f"\n{'='*60}\n  PHASE 1 - warmup ({P1_EPOCHS} ep, frozen enc, sigma={SIGMA_P1})\n{'='*60}")
+        set_encoder_grad(model, False)
+        op1 = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
+                                lr=LR_HEAD_P1, weight_decay=WEIGHT_DECAY)
+        sc1 = torch.optim.lr_scheduler.CosineAnnealingLR(op1, T_max=P1_EPOCHS, eta_min=1e-5)
+        train_ds.set_sigma(SIGMA_P1)
+        val_ds.set_sigma(SIGMA_P1)
 
-    freeze_encoder(model)
-    opt = torch.optim.AdamW(
+        for ep in range(1, P1_EPOCHS + 1):
+            t0 = time.time()
+            aw = aux_weight(SIGMA_P1)
+            tl_loss, sub = train_epoch(model, tl, op1, crit, device,
+                                       SIGMA_P1, do_mixup=True, do_aux=has_aux,
+                                       aw=aw, scaler=scaler, use_amp=use_amp)
+            v = validate(model, vl, crit, device, SIGMA_P1)
+            sc1.step()
+            print(f"[P1] {ep:2d}/{P1_EPOCHS} | sigma={SIGMA_P1} | lr={op1.param_groups[-1]['lr']:.2e} | "
+                  f"Train={tl_loss:.4f} | Val={v['val_loss']:.4f} | "
+                  f"MRE={v['mre']:.2f}px (LM1={v['mre1']:.2f} LM2={v['mre2']:.2f}) | "
+                  f"SDR@2/5/10: {v['sdr'][2]:.3f}/{v['sdr'][5]:.3f}/{v['sdr'][10]:.3f} | "
+                  f"P50={v['pct'][50]:.2f} P90={v['pct'][90]:.2f} Max={v['pct'][100]:.2f}px | "
+                  f"{time.time()-t0:.0f}s")
+            history.append({"epoch": ep, "phase": "P1", "train_loss": tl_loss,
+                            "val_loss": v["val_loss"], "mre": v["mre"],
+                            "sdr": v["sdr"][5], "sigma": SIGMA_P1})
+            save_epoch_log(run_dir, {
+                "epoch": ep, "phase": "P1", "in_channels": IN_CHANNELS,
+                "train_loss": tl_loss, "val_loss": v["val_loss"],
+                "mre": v["mre"], "mre1": v["mre1"], "mre2": v["mre2"],
+                "sdr2": v["sdr"][2], "sdr5": v["sdr"][5], "sdr10": v["sdr"][10],
+                "p50": v["pct"][50], "p90": v["pct"][90],
+                "sigma": SIGMA_P1, "lr": op1.param_groups[-1]["lr"],
+                "best_p90_so_far": best_score,
+            })
+
+        # ═════════════════════════════════════════════════════════════════════
+        # PHASE 2 — cosine sigma curriculum, full model
+        # ═════════════════════════════════════════════════════════════════════
+        print(f"\n{'='*60}\n  PHASE 2 - curriculum ({P2_EPOCHS} ep, sigma {SIGMA_START}->{SIGMA_END}, cosine)\n{'='*60}")
+        set_encoder_grad(model, True)
+        enc_pfx = ["enc0", "enc1", "enc2", "enc3", "enc4"]
+        op2 = torch.optim.AdamW([
+            {"params": [p for n, p in model.named_parameters()
+                        if any(n.startswith(x) for x in enc_pfx)],     "lr": LR_BACKBONE_P2},
+            {"params": [p for n, p in model.named_parameters()
+                        if not any(n.startswith(x) for x in enc_pfx)], "lr": LR_HEAD_P2},
+        ], weight_decay=WEIGHT_DECAY)
+        sc2 = torch.optim.lr_scheduler.CosineAnnealingLR(op2, T_max=P2_EPOCHS, eta_min=2e-6)
+
+        no_imp = 0
+        for ep_loc in range(1, P2_EPOCHS + 1):
+            t0    = time.time()
+            ep_g  = P1_EPOCHS + ep_loc
+            sigma = sigma_p2(ep_loc - 1, P2_EPOCHS)
+            train_ds.set_sigma(sigma)
+            val_ds.set_sigma(sigma)
+
+            aw = aux_weight(sigma)
+            tl_loss, sub = train_epoch(model, tl, op2, crit, device,
+                                       sigma, do_mixup=True, do_aux=has_aux,
+                                       aw=aw, scaler=scaler, use_amp=use_amp)
+            v = validate(model, vl, crit, device, sigma)
+            sc2.step()
+
+            score    = v["pct"][90]
+            improved = score < best_score
+            print(f"[P2] {ep_g:2d} | sigma={sigma:.2f} | lr={op2.param_groups[-1]['lr']:.2e} | "
+                  f"Train={tl_loss:.4f} | Val={v['val_loss']:.4f} | "
+                  f"MRE={v['mre']:.2f}px (LM1={v['mre1']:.2f} LM2={v['mre2']:.2f}) | "
+                  f"SDR@2/5/10: {v['sdr'][2]:.3f}/{v['sdr'][5]:.3f}/{v['sdr'][10]:.3f} | "
+                  f"P50={v['pct'][50]:.2f} P90={v['pct'][90]:.2f} Max={v['pct'][100]:.2f}px"
+                  + (" best" if improved else "") + f" | {time.time()-t0:.0f}s")
+            history.append({"epoch": ep_g, "phase": "P2", "train_loss": tl_loss,
+                            "val_loss": v["val_loss"], "mre": v["mre"],
+                            "sdr": v["sdr"][5], "sigma": sigma})
+            save_epoch_log(run_dir, {
+                "epoch": ep_g, "phase": "P2", "in_channels": IN_CHANNELS,
+                "train_loss": tl_loss, "val_loss": v["val_loss"],
+                "mre": v["mre"], "mre1": v["mre1"], "mre2": v["mre2"],
+                "sdr2": v["sdr"][2], "sdr5": v["sdr"][5], "sdr10": v["sdr"][10],
+                "p50": v["pct"][50], "p90": v["pct"][90],
+                "sigma": sigma, "lr": op2.param_groups[-1]["lr"],
+                "best_p90_so_far": best_score,
+            })
+
+            if improved:
+                best_score    = score
+                best_mre      = score
+                best_val_mre  = v["mre"]
+                best_val_sdr5 = v["sdr"][5]
+                no_imp        = 0
+                torch.save(model.state_dict(), os.path.join(run_dir, "best_p2.pth"))
+                save_epoch_grid(*v["vis"], epoch=ep_g, save_dir=grids_dir, n_samples=N_VIS)
+            else:
+                no_imp += 1
+                if no_imp >= EARLY_STOP_P2:
+                    print("  Warning: P2 early stop")
+                    break
+            torch.save(model.state_dict(), os.path.join(run_dir, "last_model.pth"))
+    else:
+        print(f"\n{'='*60}\n  PHASE 2 - skipped (using provided checkpoint)\n{'='*60}")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # PHASE 3 — subpixel precision squeeze
+    # ═════════════════════════════════════════════════════════════════════════
+    print(f"\n{'='*60}\n  PHASE 3 - precision ({P3_EPOCHS} ep, "
+          f"sigma {SIGMA_P3_START}->{SIGMA_P3_END}, LR={LR_P3}->1e-6)\n{'='*60}")
+
+    set_encoder_grad(model, True)
+
+    p2_ckpt = p2_checkpoint or os.path.join(run_dir, "best_p2.pth")
+    if p2_ckpt and os.path.exists(p2_ckpt):
+        model.load_state_dict(torch.load(p2_ckpt, map_location=device, weights_only=True))
+        print(f"  Loaded P2 checkpoint: {p2_ckpt}")
+        v        = validate(model, vl, crit_p3, device, SIGMA_P3_START)
+        best_mre = v["pct"][90]
+        print(f"  P2 baseline — P90={v['pct'][90]:.2f}px  MRE={v['mre']:.2f}px")
+
+    op3 = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=5e-4, weight_decay=WEIGHT_DECAY,
+        lr=LR_P3, weight_decay=WEIGHT_DECAY,
     )
+    sc3 = torch.optim.lr_scheduler.CosineAnnealingLR(op3, T_max=P3_EPOCHS, eta_min=1e-6)
 
-    for ep in range(P1_EPOCHS):
-        global_epoch += 1
-        sigma = SIGMA_P1
+    best_mre_p3 = best_mre
+    no_imp      = 0
+
+    for ep_loc in range(1, P3_EPOCHS + 1):
+        t0    = time.time()
+        ep_g  = P1_EPOCHS + P2_EPOCHS + ep_loc
+        t     = (ep_loc - 1) / max(P3_EPOCHS - 1, 1)
+        sigma = SIGMA_P3_START + t * (SIGMA_P3_END - SIGMA_P3_START)
         train_ds.set_sigma(sigma)
         val_ds.set_sigma(sigma)
 
-        t0         = time.time()
-        train_loss = train_epoch(model, train_loader, opt, criterion,
-                                 scaler, device, use_amp, mixup_prob=0.0)
-        val_loss, mre, lm1_e, lm2_e, sdr, pct = validate(
-            model, val_loader, device, criterion, global_epoch, grid_dir)
+        tl_loss, sub = train_epoch(model, tl, op3, crit_p3, device,
+                                   sigma, do_mixup=False, do_aux=False,
+                                   aw=0.0, scaler=scaler, use_amp=use_amp, clip=3.0)
+        v = validate(model, vl, crit_p3, device, sigma)
+        sc3.step()
 
-        print(f"  P1 {ep+1:02d}/{P1_EPOCHS} | σ={sigma:.1f} | "
-              f"loss {train_loss:.4f}/{val_loss:.4f} | "
-              f"MRE={mre:.2f}px | SDR@5={sdr[5]*100:.1f}% | "
-              f"P90={pct[90]:.2f}px | {time.time()-t0:.0f}s")
-
-        curve_history.append({"epoch": global_epoch, "train_loss": train_loss,
-                               "val_loss": val_loss, "mre": mre, "sdr": sdr[5],
-                               "sigma": sigma})
+        improved = v["pct"][90] < best_mre_p3
+        print(f"[P3] {ep_g:2d} | sigma={sigma:.2f} | lr={op3.param_groups[0]['lr']:.2e} | "
+              f"Train={tl_loss:.4f} | Val={v['val_loss']:.4f} | "
+              f"MRE={v['mre']:.2f}px (LM1={v['mre1']:.2f} LM2={v['mre2']:.2f}) | "
+              f"SDR@2/5/10: {v['sdr'][2]:.3f}/{v['sdr'][5]:.3f}/{v['sdr'][10]:.3f} | "
+              f"P50={v['pct'][50]:.2f} P90={v['pct'][90]:.2f} Max={v['pct'][100]:.2f}px"
+              + (" best" if improved else "") + f" | {time.time()-t0:.0f}s")
+        history.append({"epoch": ep_g, "phase": "P3", "train_loss": tl_loss,
+                        "val_loss": v["val_loss"], "mre": v["mre"],
+                        "sdr": v["sdr"][5], "sigma": sigma})
         save_epoch_log(run_dir, {
-            "run_dir": run_dir, "in_channels": IN_CHANNELS, "phase": "P1",
-            "epoch": global_epoch, "train_loss": train_loss, "val_loss": val_loss,
-            "val_mre": mre, "val_mre_lm1": lm1_e, "val_mre_lm2": lm2_e,
-            "val_sdr2": sdr[2], "val_sdr5": sdr[5], "val_sdr10": sdr[10],
-            "val_p50": pct[50], "val_p90": pct[90],
-            "sigma": sigma, "lr": current_lr(opt), "best_p90_so_far": best_p90_p2,
+            "epoch": ep_g, "phase": "P3", "in_channels": IN_CHANNELS,
+            "train_loss": tl_loss, "val_loss": v["val_loss"],
+            "mre": v["mre"], "mre1": v["mre1"], "mre2": v["mre2"],
+            "sdr2": v["sdr"][2], "sdr5": v["sdr"][5], "sdr10": v["sdr"][10],
+            "p50": v["pct"][50], "p90": v["pct"][90],
+            "sigma": sigma, "lr": op3.param_groups[0]["lr"],
+            "best_p90_so_far": best_mre_p3,
         })
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # Phase 2 — Curriculum
-    # ══════════════════════════════════════════════════════════════════════════
-    print("\n" + "=" * 62)
-    print("PHASE 2 — Curriculum  (BN unfrozen, sigma decay, mixup)")
-    print("=" * 62)
-
-    unfreeze_encoder_bn(model)
-    enc_params  = [p for n, p in model.named_parameters()
-                   if n.split(".")[0] in _ENC and p.requires_grad]
-    rest_params = [p for n, p in model.named_parameters()
-                   if n.split(".")[0] not in _ENC and p.requires_grad]
-    opt = torch.optim.AdamW(
-        [{"params": enc_params, "lr": 1e-5},
-         {"params": rest_params, "lr": 2e-4}],
-        weight_decay=WEIGHT_DECAY,
-    )
-
-    for ep in range(P2_EPOCHS):
-        global_epoch += 1
-        sigma = cosine_anneal(SIGMA_P1, SIGMA_P2_END, ep, P2_EPOCHS)
-        train_ds.set_sigma(sigma)
-        val_ds.set_sigma(sigma)
-
-        t0         = time.time()
-        train_loss = train_epoch(model, train_loader, opt, criterion,
-                                 scaler, device, use_amp, mixup_prob=0.3)
-        val_loss, mre, lm1_e, lm2_e, sdr, pct = validate(
-            model, val_loader, device, criterion, global_epoch, grid_dir)
-
-        print(f"  P2 {ep+1:02d}/{P2_EPOCHS} | σ={sigma:.2f} | "
-              f"loss {train_loss:.4f}/{val_loss:.4f} | "
-              f"MRE={mre:.2f}px | SDR@5={sdr[5]*100:.1f}% | "
-              f"P90={pct[90]:.2f}px | {time.time()-t0:.0f}s")
-
-        curve_history.append({"epoch": global_epoch, "train_loss": train_loss,
-                               "val_loss": val_loss, "mre": mre, "sdr": sdr[5],
-                               "sigma": sigma})
-        save_epoch_log(run_dir, {
-            "run_dir": run_dir, "in_channels": IN_CHANNELS, "phase": "P2",
-            "epoch": global_epoch, "train_loss": train_loss, "val_loss": val_loss,
-            "val_mre": mre, "val_mre_lm1": lm1_e, "val_mre_lm2": lm2_e,
-            "val_sdr2": sdr[2], "val_sdr5": sdr[5], "val_sdr10": sdr[10],
-            "val_p50": pct[50], "val_p90": pct[90],
-            "sigma": sigma, "lr": current_lr(opt), "best_p90_so_far": best_p90_p2,
-        })
-
-        if pct[90] < best_p90_p2:
-            best_p90_p2    = pct[90]
-            no_improve_p2  = 0
-            best_epoch     = global_epoch
-            torch.save(model.state_dict(), best_p2_path)
-            print(f"    ↳ saved best_p2.pth  (P90={best_p90_p2:.2f}px)")
+        if improved:
+            best_mre_p3   = v["pct"][90]
+            best_val_mre  = v["mre"]
+            best_val_sdr5 = v["sdr"][5]
+            no_imp        = 0
+            torch.save(model.state_dict(), os.path.join(run_dir, "best_model.pth"))
+            save_epoch_grid(*v["vis"], epoch=ep_g, save_dir=grids_dir, n_samples=N_VIS)
         else:
-            no_improve_p2 += 1
-            if no_improve_p2 >= 15:
-                print(f"    Early stop P2 at local epoch {ep+1} (patience=15)")
+            no_imp += 1
+            if no_imp >= EARLY_STOP_P3:
+                print("  Warning: P3 early stop")
                 break
+        torch.save(model.state_dict(), os.path.join(run_dir, "last_model.pth"))
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # Phase 3 — Precision
-    # ══════════════════════════════════════════════════════════════════════════
-    print("\n" + "=" * 62)
-    print("PHASE 3 — Precision  (full unfreeze, discriminative LR)")
-    print("=" * 62)
+    save_training_curve(history, run_dir)
 
-    model.load_state_dict(torch.load(best_p2_path, map_location=device))
-    unfreeze_all(model)
-    opt = torch.optim.AdamW(p3_param_groups(model), weight_decay=WEIGHT_DECAY)
-
-    for ep in range(P3_EPOCHS):
-        global_epoch += 1
-        sigma = cosine_anneal(SIGMA_P2_END, SIGMA_P3_END, ep, P3_EPOCHS)
-        train_ds.set_sigma(sigma)
-        val_ds.set_sigma(sigma)
-
-        t0         = time.time()
-        train_loss = train_epoch(model, train_loader, opt, criterion,
-                                 scaler, device, use_amp, mixup_prob=0.0)
-        val_loss, mre, lm1_e, lm2_e, sdr, pct = validate(
-            model, val_loader, device, criterion, global_epoch, grid_dir)
-
-        print(f"  P3 {ep+1:02d}/{P3_EPOCHS} | σ={sigma:.3f} | "
-              f"loss {train_loss:.4f}/{val_loss:.4f} | "
-              f"MRE={mre:.2f}px | SDR@5={sdr[5]*100:.1f}% | "
-              f"P90={pct[90]:.2f}px | {time.time()-t0:.0f}s")
-
-        curve_history.append({"epoch": global_epoch, "train_loss": train_loss,
-                               "val_loss": val_loss, "mre": mre, "sdr": sdr[5],
-                               "sigma": sigma})
-        save_epoch_log(run_dir, {
-            "run_dir": run_dir, "in_channels": IN_CHANNELS, "phase": "P3",
-            "epoch": global_epoch, "train_loss": train_loss, "val_loss": val_loss,
-            "val_mre": mre, "val_mre_lm1": lm1_e, "val_mre_lm2": lm2_e,
-            "val_sdr2": sdr[2], "val_sdr5": sdr[5], "val_sdr10": sdr[10],
-            "val_p50": pct[50], "val_p90": pct[90],
-            "sigma": sigma, "lr": current_lr(opt), "best_p90_so_far": best_p90_p3,
-        })
-
-        if pct[90] < best_p90_p3:
-            best_p90_p3    = pct[90]
-            no_improve_p3  = 0
-            best_epoch     = global_epoch
-            best_val_mre   = mre
-            best_val_sdr5  = sdr[5]
-            torch.save(model.state_dict(), best_model_path)
-            print(f"    ↳ saved best_model.pth  (P90={best_p90_p3:.2f}px)")
-        else:
-            no_improve_p3 += 1
-            if no_improve_p3 >= 20:
-                print(f"    Early stop P3 at local epoch {ep+1} (patience=20)")
-                break
-
-    torch.save(model.state_dict(), last_model_path)
-
-    # ─────────────────────────── test ─────────────────────────────────────────
+    # ── test evaluation ────────────────────────────────────────────────────────
+    best_model_path = os.path.join(run_dir, "best_model.pth")
+    if os.path.exists(best_model_path):
+        model.load_state_dict(torch.load(best_model_path, map_location=device,
+                                         weights_only=True))
     print("\nEvaluating on test set (patients 091-100) …")
-    model.load_state_dict(torch.load(best_model_path, map_location=device))
-    t_mre, t_lm1, t_lm2, t_sdr, t_pct = evaluate_test(model, device)
+    test_v = evaluate_test(model, device, crit_p3)
 
-    # Training curve PNG
-    save_training_curve(curve_history, run_dir)
-
-    # results.json
+    # ── results.json ──────────────────────────────────────────────────────────
     results = {
-        "best_val_p90":  best_p90_p3,
+        "in_channels":   IN_CHANNELS,
+        "checkpoint":    best_model_path,
+        "best_val_p90":  best_mre_p3,
         "best_val_mre":  best_val_mre,
         "best_val_sdr5": best_val_sdr5,
-        "best_epoch":    best_epoch,
-        "test_mre":      t_mre,
-        "test_mre_lm1":  t_lm1,
-        "test_mre_lm2":  t_lm2,
-        "test_sdr2":     t_sdr[2],
-        "test_sdr5":     t_sdr[5],
-        "test_sdr10":    t_sdr[10],
-        "test_p50":      t_pct[50],
-        "test_p90":      t_pct[90],
-        "checkpoint":    best_model_path,
-        "total_epochs":  global_epoch,
+        "test_mre":      test_v["mre"],
+        "test_mre_lm1":  test_v["mre1"],
+        "test_mre_lm2":  test_v["mre2"],
+        "test_sdr2":     test_v["sdr"][2],
+        "test_sdr5":     test_v["sdr"][5],
+        "test_sdr10":    test_v["sdr"][10],
+        "test_p50":      test_v["pct"][50],
+        "test_p90":      test_v["pct"][90],
     }
     with open(os.path.join(run_dir, "results.json"), "w") as f:
         json.dump(results, f, indent=2)
 
-    # ── final summary ─────────────────────────────────────────────────────────
-    print()
-    print("=" * 44)
+    # ── final summary ──────────────────────────────────────────────────────────
+    print(f"\n{'='*44}")
     print("TRAINING COMPLETE")
-    print(f"Val  MRE  : {best_val_mre:.2f}px")
-    print(f"Val  SDR@5: {best_val_sdr5*100:.1f}%")
-    print(f"Test MRE  : {t_mre:.2f}px")
-    print(f"Test SDR@5: {t_sdr[5]*100:.1f}%")
-    print(f"Checkpoint: {best_model_path}")
-    print("=" * 44)
+    print(f"Val  MRE    : {best_val_mre:.2f}px")
+    print(f"Val  SDR@5  : {best_val_sdr5*100:.1f}%")
+    print(f"Test MRE    : {test_v['mre']:.2f}px")
+    print(f"Test MRE LM1: {test_v['mre1']:.2f}px")
+    print(f"Test MRE LM2: {test_v['mre2']:.2f}px")
+    print(f"Test SDR@2  : {test_v['sdr'][2]*100:.1f}%")
+    print(f"Test SDR@5  : {test_v['sdr'][5]*100:.1f}%")
+    print(f"Test SDR@10 : {test_v['sdr'][10]*100:.1f}%")
+    print(f"Checkpoint  : {best_model_path}")
+    print(f"{'='*44}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--p2-checkpoint", default=None,
+                        help="Path to a P2 checkpoint to skip straight to P3")
+    args = parser.parse_args()
+    try:
+        train(p2_checkpoint=args.p2_checkpoint)
+    except KeyboardInterrupt:
+        print("\nTraining interrupted by user (Ctrl+C)")
+        torch.cuda.empty_cache()
+        print("You can continue using the terminal normally.")
