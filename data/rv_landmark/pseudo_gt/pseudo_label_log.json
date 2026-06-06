@@ -1,0 +1,2714 @@
+{
+  "checkpoint": "rv-checkpoints/finetune_pseudo_instnorm_2026-05-19_17-33-07/best_model.pth",
+  "threshold": 0.7,
+  "min_dist": 10.0,
+  "use_tta": true,
+  "in_channels": 2,
+  "total_slices": 655,
+  "accepted_slices": 161,
+  "acceptance_rate": 0.2458,
+  "per_file": {
+    "DET0000101.nii.gz": {
+      "accepted": [
+        0,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=116.7 >= y2=82.5"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=115.5 >= y2=80.1"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0000201.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=156.2 >= y2=120.6"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=153.7 >= y2=121.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=153.8 >= y2=122.2"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=151.1 >= y2=127.9"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=152.3 >= y2=133.7"
+        }
+      ]
+    },
+    "DET0000801.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=108.6 >= y2=76.7"
+        }
+      ]
+    },
+    "DET0001101.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=7.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=3.4px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.8px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=139.3 >= y2=112.5"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=141.1 >= y2=111.1"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=140.9 >= y2=109.8"
+        }
+      ]
+    },
+    "DET0001201.nii.gz": {
+      "accepted": [
+        2,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.4px <= 10.0"
+        }
+      ]
+    },
+    "DET0001301.nii.gz": {
+      "accepted": [
+        0,
+        2,
+        4,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0001401.nii.gz": {
+      "accepted": [
+        1,
+        2,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=133.0 >= y2=104.1"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=134.9 >= y2=99.1"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=136.5 >= y2=98.7"
+        }
+      ]
+    },
+    "DET0001501.nii.gz": {
+      "accepted": [
+        0,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=198.0 >= y2=157.9"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=196.2 >= y2=156.5"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=4.6px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0001601.nii.gz": {
+      "accepted": [
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.5px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=108.5 >= y2=84.6"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=107.2 >= y2=82.7"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=110.6 >= y2=84.4"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=110.5 >= y2=83.6"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 8,
+          "reason": "dist=0.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0001701.nii.gz": {
+      "accepted": [
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=147.8 >= y2=107.5"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=147.2 >= y2=108.1"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=147.6 >= y2=106.2"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0001801.nii.gz": {
+      "accepted": [
+        1,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.2px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=149.1 >= y2=106.6"
+        }
+      ]
+    },
+    "DET0002001.nii.gz": {
+      "accepted": [
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=4.5px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=149.6 >= y2=117.1"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=151.1 >= y2=120.8"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0002401.nii.gz": {
+      "accepted": [
+        0,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=145.6 >= y2=109.5"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=142.9 >= y2=111.6"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=9.6px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=7.4px <= 10.0"
+        }
+      ]
+    },
+    "DET0002501.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.2px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=147.9 >= y2=128.5"
+        }
+      ]
+    },
+    "DET0002601.nii.gz": {
+      "accepted": [
+        0,
+        1,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=132.1 >= y2=126.5"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=5.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0002701.nii.gz": {
+      "accepted": [
+        0,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.2px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=165.3 >= y2=127.8"
+        }
+      ]
+    },
+    "DET0002801.nii.gz": {
+      "accepted": [
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=174.9 >= y2=137.8"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=169.1 >= y2=128.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0002901.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=131.0 >= y2=97.2"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=136.0 >= y2=101.2"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=131.3 >= y2=93.3"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=130.2 >= y2=89.4"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.2px <= 10.0"
+        }
+      ]
+    },
+    "DET0003001.nii.gz": {
+      "accepted": [
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=141.1 >= y2=121.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=143.8 >= y2=116.4"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=4.5px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=146.6 >= y2=113.3"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=4.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0003101.nii.gz": {
+      "accepted": [
+        8
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=6.3px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=4.7px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=8.9px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=284.7 >= y2=192.9"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=283.9 >= y2=195.4"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=3.1px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=3.7px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=6.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0003201.nii.gz": {
+      "accepted": [
+        0,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=8.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=6.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0003301.nii.gz": {
+      "accepted": [
+        1
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=297.4 >= y2=227.5"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=6.1px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=6.0px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=299.7 >= y2=236.4"
+        }
+      ]
+    },
+    "DET0003401.nii.gz": {
+      "accepted": [
+        1,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=313.7 >= y2=217.7"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=309.2 >= y2=233.5"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=1.8px <= 10.0"
+        }
+      ]
+    },
+    "DET0003501.nii.gz": {
+      "accepted": [
+        0,
+        1,
+        5,
+        7,
+        8,
+        9
+      ],
+      "rejected": [
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=288.3 >= y2=201.5"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=7.9px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.9px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=289.5 >= y2=203.5"
+        }
+      ]
+    },
+    "DET0003601.nii.gz": {
+      "accepted": [
+        0,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=154.1 >= y2=108.5"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=3.9px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=151.6 >= y2=111.3"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=4.2px <= 10.0"
+        }
+      ]
+    },
+    "DET0003701.nii.gz": {
+      "accepted": [
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.5px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=139.4 >= y2=107.6"
+        }
+      ]
+    },
+    "DET0003801.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=6.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=151.2 >= y2=119.3"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=150.4 >= y2=124.7"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=161.1 >= y2=123.0"
+        }
+      ]
+    },
+    "DET0003901.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=155.3 >= y2=113.3"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=154.4 >= y2=116.1"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=122.6 >= y2=109.5"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=8.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0004001.nii.gz": {
+      "accepted": [
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=157.9 >= y2=102.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=155.2 >= y2=101.9"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.9px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=154.3 >= y2=109.6"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=150.1 >= y2=108.0"
+        }
+      ]
+    },
+    "DET0004101.nii.gz": {
+      "accepted": [
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=7.8px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=4.1px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=164.0 >= y2=130.9"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=4.6px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=4.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0004201.nii.gz": {
+      "accepted": [
+        4,
+        5,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.7px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=5.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=149.4 >= y2=117.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=4.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0004301.nii.gz": {
+      "accepted": [
+        1,
+        4,
+        7
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=149.7 >= y2=115.9"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=152.6 >= y2=110.8"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=2.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0004401.nii.gz": {
+      "accepted": [
+        0,
+        4,
+        5,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=168.3 >= y2=130.5"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=2.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0004601.nii.gz": {
+      "accepted": [
+        0,
+        1,
+        5,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 2,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=132.7 >= y2=90.9"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0004701.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.8px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=3.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=142.2 >= y2=109.8"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=142.5 >= y2=110.3"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=4.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0004801.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=148.6 >= y2=97.1"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=149.4 >= y2=100.6"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=147.7 >= y2=105.1"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=148.7 >= y2=104.7"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=146.2 >= y2=103.9"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=145.1 >= y2=101.1"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=3.9px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "ordering fail: y1=145.6 >= y2=106.2"
+        }
+      ]
+    },
+    "DET0004901.nii.gz": {
+      "accepted": [
+        1,
+        2,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0005001.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=133.7 >= y2=120.1"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=149.6 >= y2=111.4"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=160.2 >= y2=127.4"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=157.3 >= y2=127.3"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=154.7 >= y2=117.5"
+        }
+      ]
+    },
+    "DET0005101.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=148.0 >= y2=119.7"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=146.5 >= y2=121.7"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=148.8 >= y2=118.1"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=151.3 >= y2=120.9"
+        },
+        {
+          "slice": 7,
+          "reason": "ordering fail: y1=153.3 >= y2=117.7"
+        },
+        {
+          "slice": 8,
+          "reason": "ordering fail: y1=155.4 >= y2=121.0"
+        },
+        {
+          "slice": 9,
+          "reason": "dist=1.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0005201.nii.gz": {
+      "accepted": [
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=154.2 >= y2=112.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.9px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=126.7 >= y2=113.4"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=4.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=3.9px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=3.4px <= 10.0"
+        },
+        {
+          "slice": 8,
+          "reason": "dist=2.3px <= 10.0"
+        }
+      ]
+    },
+    "DET0005401.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=142.3 >= y2=115.6"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=142.3 >= y2=110.4"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=150.3 >= y2=112.4"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.5px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=4.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=142.3 >= y2=98.0"
+        }
+      ]
+    },
+    "DET0005501.nii.gz": {
+      "accepted": [
+        0,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=6.2px <= 10.0"
+        }
+      ]
+    },
+    "DET0005601.nii.gz": {
+      "accepted": [
+        0,
+        1,
+        7,
+        8
+      ],
+      "rejected": [
+        {
+          "slice": 2,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=146.4 >= y2=113.1"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=4.1px <= 10.0"
+        }
+      ]
+    },
+    "DET0005701.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=138.9 >= y2=103.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=138.2 >= y2=103.5"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=139.2 >= y2=102.8"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=135.8 >= y2=98.1"
+        }
+      ]
+    },
+    "DET0005801.nii.gz": {
+      "accepted": [
+        1,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=8.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0005901.nii.gz": {
+      "accepted": [
+        1,
+        2,
+        3,
+        6,
+        7,
+        8
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.8px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=4.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=146.7 >= y2=109.1"
+        }
+      ]
+    },
+    "DET0006001.nii.gz": {
+      "accepted": [
+        0,
+        4,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=138.8 >= y2=100.7"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "ordering fail: y1=134.3 >= y2=104.6"
+        },
+        {
+          "slice": 8,
+          "reason": "ordering fail: y1=136.1 >= y2=102.8"
+        }
+      ]
+    },
+    "DET0006101.nii.gz": {
+      "accepted": [
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=5.1px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=148.2 >= y2=99.9"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=2.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0006201.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=158.8 >= y2=118.9"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=155.9 >= y2=114.2"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=154.8 >= y2=112.4"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=2.5px <= 10.0"
+        }
+      ]
+    },
+    "DET0006301.nii.gz": {
+      "accepted": [
+        0,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=148.5 >= y2=109.9"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=149.7 >= y2=106.6"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=0.4px <= 10.0"
+        }
+      ]
+    },
+    "DET0006401.nii.gz": {
+      "accepted": [
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=148.0 >= y2=108.3"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=146.6 >= y2=107.8"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=147.7 >= y2=108.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=148.4 >= y2=101.3"
+        }
+      ]
+    },
+    "DET0006501.nii.gz": {
+      "accepted": [
+        1,
+        4,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.7px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=158.1 >= y2=119.8"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.8px <= 10.0"
+        }
+      ]
+    },
+    "DET0007101.nii.gz": {
+      "accepted": [
+        2,
+        4,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=5.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=143.9 >= y2=107.6"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=4.7px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.8px <= 10.0"
+        }
+      ]
+    },
+    "DET0008801.nii.gz": {
+      "accepted": [
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.4px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=145.3 >= y2=111.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=140.1 >= y2=108.2"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=1.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0008901.nii.gz": {
+      "accepted": [
+        0,
+        2,
+        9
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=144.3 >= y2=110.2"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 8,
+          "reason": "ordering fail: y1=147.7 >= y2=110.6"
+        }
+      ]
+    },
+    "DET0009001.nii.gz": {
+      "accepted": [
+        3,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=114.8 >= y2=90.4"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=119.5 >= y2=87.3"
+        }
+      ]
+    },
+    "DET0009301.nii.gz": {
+      "accepted": [
+        1,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=154.0 >= y2=110.1"
+        }
+      ]
+    },
+    "DET0009801.nii.gz": {
+      "accepted": [
+        2,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=111.2 >= y2=84.1"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.4px <= 10.0"
+        }
+      ]
+    },
+    "DET0010601.nii.gz": {
+      "accepted": [
+        0,
+        1,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 2,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=149.0 >= y2=114.6"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=145.5 >= y2=107.7"
+        },
+        {
+          "slice": 7,
+          "reason": "hm1_max=0.005 <= 0.7"
+        }
+      ]
+    },
+    "DET0012801.nii.gz": {
+      "accepted": [
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=124.5 >= y2=88.1"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=125.0 >= y2=89.3"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.5px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0014101.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=170.9 >= y2=126.7"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=171.1 >= y2=121.7"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=0.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0014201.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.3px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=152.6 >= y2=113.4"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0015201.nii.gz": {
+      "accepted": [
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=110.8 >= y2=80.6"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=111.0 >= y2=75.1"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0015401.nii.gz": {
+      "accepted": [
+        1,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.1px <= 10.0"
+        }
+      ]
+    },
+    "DET0015601.nii.gz": {
+      "accepted": [
+        1,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=155.4 >= y2=115.5"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=156.4 >= y2=114.4"
+        }
+      ]
+    },
+    "DET0016101.nii.gz": {
+      "accepted": [
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=151.8 >= y2=114.4"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=154.2 >= y2=118.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.6px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=140.0 >= y2=112.7"
+        }
+      ]
+    },
+    "DET0021501.nii.gz": {
+      "accepted": [
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.1px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=93.1 >= y2=69.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "ordering fail: y1=96.1 >= y2=60.3"
+        },
+        {
+          "slice": 8,
+          "reason": "ordering fail: y1=97.3 >= y2=58.9"
+        }
+      ]
+    },
+    "DET0021701.nii.gz": {
+      "accepted": [
+        0,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=109.4 >= y2=80.7"
+        }
+      ]
+    },
+    "DET0023001.nii.gz": {
+      "accepted": [
+        0,
+        2,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=150.8 >= y2=116.9"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=147.0 >= y2=118.0"
+        }
+      ]
+    },
+    "DET0024401.nii.gz": {
+      "accepted": [
+        0,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=108.5 >= y2=81.8"
+        }
+      ]
+    },
+    "DET0024501.nii.gz": {
+      "accepted": [
+        0,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=3.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=145.7 >= y2=105.4"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=146.5 >= y2=103.7"
+        }
+      ]
+    },
+    "DET0026801.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=4.7px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=3.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=3.1px <= 10.0"
+        }
+      ]
+    },
+    "DET0026901.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=4.3px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=149.7 >= y2=108.1"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.2px <= 10.0"
+        }
+      ]
+    },
+    "DET0028301.nii.gz": {
+      "accepted": [
+        2,
+        3,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=108.7 >= y2=90.2"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0028601.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.3px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=113.0 >= y2=79.3"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=112.9 >= y2=79.0"
+        }
+      ]
+    },
+    "DET0028801.nii.gz": {
+      "accepted": [
+        1
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0029001.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=115.6 >= y2=92.6"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=111.3 >= y2=86.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=114.1 >= y2=85.9"
+        }
+      ]
+    },
+    "DET0030101.nii.gz": {
+      "accepted": [
+        1,
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=121.2 >= y2=91.5"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.9px <= 10.0"
+        }
+      ]
+    },
+    "DET0030901.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=145.5 >= y2=112.8"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=144.8 >= y2=113.1"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=2.7px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=145.0 >= y2=113.4"
+        }
+      ]
+    },
+    "DET0035501.nii.gz": {
+      "accepted": [
+        1
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=3.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=125.8 >= y2=89.2"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=128.1 >= y2=91.2"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=134.6 >= y2=93.1"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=131.5 >= y2=91.0"
+        },
+        {
+          "slice": 7,
+          "reason": "ordering fail: y1=128.8 >= y2=89.1"
+        },
+        {
+          "slice": 8,
+          "reason": "dist=2.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0037101.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=5.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.7px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.7px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=156.3 >= y2=109.3"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=151.8 >= y2=108.0"
+        }
+      ]
+    },
+    "DET0039301.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=139.9 >= y2=100.2"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=138.3 >= y2=125.8"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=5.1px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 7,
+          "reason": "dist=0.1px <= 10.0"
+        }
+      ]
+    },
+    "DET0039401.nii.gz": {
+      "accepted": [
+        0
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.4px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=168.0 >= y2=112.9"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0039501.nii.gz": {
+      "accepted": [
+        1
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.6px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.6px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.6px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=3.1px <= 10.0"
+        }
+      ]
+    },
+    "DET0040001.nii.gz": {
+      "accepted": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=134.4 >= y2=132.9"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=131.6 >= y2=129.7"
+        }
+      ]
+    },
+    "DET0040101.nii.gz": {
+      "accepted": [
+        3,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=145.8 >= y2=113.2"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=148.1 >= y2=110.8"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=143.1 >= y2=99.1"
+        }
+      ]
+    },
+    "DET0040201.nii.gz": {
+      "accepted": [
+        2
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=155.5 >= y2=110.5"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.3px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0042001.nii.gz": {
+      "accepted": [
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=115.1 >= y2=92.2"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.3px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=116.2 >= y2=90.1"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=1.2px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=0.8px <= 10.0"
+        }
+      ]
+    },
+    "DET0042401.nii.gz": {
+      "accepted": [
+        1,
+        2,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.6px <= 10.0"
+        }
+      ]
+    },
+    "DET0042501.nii.gz": {
+      "accepted": [
+        0,
+        2,
+        5
+      ],
+      "rejected": [
+        {
+          "slice": 1,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=117.6 >= y2=85.4"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=4.4px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=118.1 >= y2=80.8"
+        }
+      ]
+    },
+    "DET0042601.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=104.6 >= y2=80.9"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.9px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=104.6 >= y2=79.4"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=105.2 >= y2=77.8"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=104.4 >= y2=75.1"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=0.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0043101.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=0.9px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.2px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.7px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=112.5 >= y2=79.8"
+        },
+        {
+          "slice": 5,
+          "reason": "ordering fail: y1=113.8 >= y2=79.5"
+        },
+        {
+          "slice": 6,
+          "reason": "dist=1.0px <= 10.0"
+        }
+      ]
+    },
+    "DET0043201.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=112.2 >= y2=88.2"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=2.1px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "ordering fail: y1=116.2 >= y2=84.3"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.0px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.2px <= 10.0"
+        }
+      ]
+    },
+    "DET0043501.nii.gz": {
+      "accepted": [
+        1,
+        4,
+        6
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=1.1px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.8px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.8px <= 10.0"
+        }
+      ]
+    },
+    "DET0043701.nii.gz": {
+      "accepted": [
+        1,
+        4
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=87.6 >= y2=82.4"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=8.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=2.7px <= 10.0"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=2.2px <= 10.0"
+        },
+        {
+          "slice": 6,
+          "reason": "ordering fail: y1=86.4 >= y2=79.9"
+        }
+      ]
+    },
+    "DET0043901.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "ordering fail: y1=147.4 >= y2=110.1"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.0px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "dist=0.4px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "dist=1.5px <= 10.0"
+        }
+      ]
+    },
+    "DET0044601.nii.gz": {
+      "accepted": [],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=0.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "ordering fail: y1=151.0 >= y2=111.5"
+        },
+        {
+          "slice": 2,
+          "reason": "dist=1.8px <= 10.0"
+        },
+        {
+          "slice": 3,
+          "reason": "ordering fail: y1=148.6 >= y2=108.5"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=149.6 >= y2=109.3"
+        },
+        {
+          "slice": 5,
+          "reason": "dist=1.7px <= 10.0"
+        }
+      ]
+    },
+    "DET0044801.nii.gz": {
+      "accepted": [
+        2,
+        3
+      ],
+      "rejected": [
+        {
+          "slice": 0,
+          "reason": "dist=2.5px <= 10.0"
+        },
+        {
+          "slice": 1,
+          "reason": "dist=3.5px <= 10.0"
+        },
+        {
+          "slice": 4,
+          "reason": "ordering fail: y1=160.3 >= y2=109.6"
+        }
+      ]
+    }
+  }
+}

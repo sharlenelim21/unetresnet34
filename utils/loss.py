@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 from utils.postprocess import soft_argmax_normalized
 
@@ -35,60 +36,66 @@ def wing_loss_elementwise(pred, target, w=10.0, epsilon=2.0):
 
 class HeatmapLoss(nn.Module):
     """
-    Balanced heatmap + coordinate loss.
+    Balanced heatmap + coordinate loss with per-landmark weighting.
 
-    FIX: Default wing_w lowered from 0.05 → 0.02.
-    In normalised [0,1] space, wing_w is the threshold (in fraction of image
-    width) below which the loss switches from linear to log.
-    0.05 → threshold at ~13px  (too coarse — easy samples dominate)
-    0.02 → threshold at ~5px   (correct for subpixel precision target)
-    0.005→ threshold at ~1.3px (use in P3 for final precision squeeze)
+    lm1_coord_weight   : Wing loss scale for LM1 relative to LM2 (default 3.0).
+    lm1_heatmap_weight : BCE + Dice scale for LM1 channel relative to LM2 (default 2.0).
+    sep_min_dist       : Separation margin in normalised [0,1] space (default 0.15 ≈ 38px).
+    sep_weight         : Strength of separation penalty (default 5.0).
 
-    wing_eps similarly tightened from 0.01 → 0.005.
-
+    NOTE: lm_weights parameter kept for backward compatibility but its
+    normalisation (/ w.mean()) has been removed — raw weights are used directly.
     hard_k: keep only the K highest-error samples per batch for the gradient.
-    Set to batch_size - 2 in train.py (drops the 2 easiest per batch).
     """
 
     def __init__(
         self,
         coord_weight=10.0,
-        sep_weight=1.0,
-        sep_min_dist=0.08,
-        wing_w=0.02,       
-        wing_eps=0.005,    
+        sep_weight=5.0,
+        sep_min_dist=0.15,
+        wing_w=0.02,
+        wing_eps=0.005,
         lm_weights=None,
         hard_k=None,
+        lm1_coord_weight=3.0,
+        lm1_heatmap_weight=2.0,
     ):
         super().__init__()
-        self.bce          = nn.BCEWithLogitsLoss()
-        self.coord_weight = coord_weight
-        self.sep_weight   = sep_weight
-        self.sep_min_dist = sep_min_dist
-        self.wing_w       = wing_w
-        self.wing_eps     = wing_eps
-        self.hard_k       = hard_k
+        self.coord_weight      = coord_weight
+        self.sep_weight        = sep_weight
+        self.sep_min_dist      = sep_min_dist
+        self.wing_w            = wing_w
+        self.wing_eps          = wing_eps
+        self.hard_k            = hard_k
+        self.lm1_coord_weight  = lm1_coord_weight
+        self.lm1_heatmap_weight = lm1_heatmap_weight
 
+        # lm_weights kept for API compat; no longer normalised
         if lm_weights is not None:
             w = torch.tensor(lm_weights, dtype=torch.float32)
-            self.register_buffer("lm_weights", w / w.mean())
+            self.register_buffer("lm_weights", w)
         else:
             self.lm_weights = None
 
-    def dice_loss(self, pred, target):
-        pred   = torch.sigmoid(pred)
+    def _soft_dice(self, pred_logits, target):
+        """Soft Dice on a single-channel slice [B,1,H,W]."""
+        pred   = torch.sigmoid(pred_logits)
         smooth = 1e-6
         inter  = (pred * target).sum(dim=(2, 3))
         union  = pred.sum(dim=(2, 3)) + target.sum(dim=(2, 3))
-        dice   = (2 * inter + smooth) / (union + smooth)
-        return 1 - dice.mean()
+        return (1 - (2 * inter + smooth) / (union + smooth)).mean()
 
     def forward(self, pred, target):
-        # 1. Heatmap losses (pred is raw logits, target is [0,1])
-        loss_bce  = self.bce(pred, target)
-        loss_dice = self.dice_loss(pred, target)
+        # ── 1. Per-channel heatmap losses ────────────────────────────────────
+        bce_lm1 = F.binary_cross_entropy_with_logits(pred[:, 0:1], target[:, 0:1])
+        bce_lm2 = F.binary_cross_entropy_with_logits(pred[:, 1:2], target[:, 1:2])
+        loss_bce = self.lm1_heatmap_weight * bce_lm1 + 1.0 * bce_lm2
 
-        # 2. Coordinate loss — Wing loss in normalised [0,1] space
+        dice_lm1 = self._soft_dice(pred[:, 0:1], target[:, 0:1])
+        dice_lm2 = self._soft_dice(pred[:, 1:2], target[:, 1:2])
+        loss_dice = self.lm1_heatmap_weight * dice_lm1 + 1.0 * dice_lm2
+
+        # ── 2. Per-landmark coordinate loss (Wing, normalised [0,1] space) ──
         pred_sig    = torch.sigmoid(pred)
         pred_coords = soft_argmax_normalized(pred_sig)
         gt_coords   = soft_argmax_normalized(target)
@@ -96,18 +103,20 @@ class HeatmapLoss(nn.Module):
         raw = wing_loss_elementwise(pred_coords, gt_coords,
                                     w=self.wing_w, epsilon=self.wing_eps)  # [B, 4]
 
-        if self.lm_weights is not None:
-            w = self.lm_weights.to(pred.device).repeat_interleave(2)   # [4]
-            raw = raw * w
+        loss_lm1 = raw[:, :2].mean()
+        loss_lm2 = raw[:, 2:].mean()
 
-        # Per-sample scalar loss, keep only the K hardest.
-        per_sample = raw.mean(dim=-1)   # [B]
+        # Per-sample loss for Worst-K mining uses weighted sum before reduction
+        per_sample = (
+            self.lm1_coord_weight * raw[:, :2].mean(dim=-1)
+            + 1.0               * raw[:, 2:].mean(dim=-1)
+        )   # [B]
         if self.hard_k is not None and per_sample.size(0) > self.hard_k:
             per_sample = per_sample.topk(self.hard_k).values
 
         loss_coord = per_sample.mean()
 
-        # 3. Separation loss
+        # ── 3. Separation loss ───────────────────────────────────────────────
         p1       = pred_coords[:, :2]
         p2       = pred_coords[:, 2:]
         sep      = torch.norm(p1 - p2, dim=1).mean()

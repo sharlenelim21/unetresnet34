@@ -8,4 +8,13 @@ results/
 inference_results/
 tta_results/
 
-data/lv-landmark/
+data/rv-landmark/
+data/acdc/
+data/acdc_translated/
+
+acdc-checkpoints/
+*.pth
+rv-checkpoints/
+cyclegan_results/
+
+inference_rv_results/

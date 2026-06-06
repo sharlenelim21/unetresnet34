@@ -1,0 +1,1210 @@
+{
+  "checkpoint": "acdc-checkpoints/acdc_2ch_2026-05-15_22-07-13/best_model_2ch.pth",
+  "in_channels": 2,
+  "n_slices": 168,
+  "best_val_p90": null,
+  "best_val_mre": null,
+  "best_val_sdr5": null,
+  "best_epoch": null,
+  "test_mre": 16.1974,
+  "test_mre_lm1": 19.6693,
+  "test_mre_lm2": 12.7255,
+  "test_sdr2": 0.3274,
+  "test_sdr5": 0.5714,
+  "test_sdr10": 0.6042,
+  "test_p50": 18.6693,
+  "test_p90": 24.8309,
+  "total_epochs": null,
+  "std_mre": 7.9814,
+  "max_mre": 28.7848,
+  "sdr_lm1": {
+    "2": 22.62,
+    "3": 32.74,
+    "5": 46.43,
+    "10": 50.0
+  },
+  "sdr_lm2": {
+    "2": 42.86,
+    "3": 58.93,
+    "5": 67.86,
+    "10": 70.83
+  },
+  "per_slice": [
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 0,
+      "mre": 24.9141,
+      "lm1_error": 47.0412,
+      "lm2_error": 2.787
+    },
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 1,
+      "mre": 19.4656,
+      "lm1_error": 37.594,
+      "lm2_error": 1.3373
+    },
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 2,
+      "mre": 21.7946,
+      "lm1_error": 43.3501,
+      "lm2_error": 0.2391
+    },
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 3,
+      "mre": 21.0635,
+      "lm1_error": 41.344,
+      "lm2_error": 0.783
+    },
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 4,
+      "mre": 18.9937,
+      "lm1_error": 35.5848,
+      "lm2_error": 2.4026
+    },
+    {
+      "file": "patient091_frame01.nii.gz",
+      "slice": 5,
+      "mre": 13.9613,
+      "lm1_error": 26.4303,
+      "lm2_error": 1.4923
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 0,
+      "mre": 20.6037,
+      "lm1_error": 38.1369,
+      "lm2_error": 3.0705
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 1,
+      "mre": 20.4799,
+      "lm1_error": 38.2455,
+      "lm2_error": 2.7142
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 2,
+      "mre": 17.2012,
+      "lm1_error": 33.1465,
+      "lm2_error": 1.2559
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 3,
+      "mre": 17.694,
+      "lm1_error": 33.9757,
+      "lm2_error": 1.4124
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 4,
+      "mre": 3.4442,
+      "lm1_error": 4.6537,
+      "lm2_error": 2.2347
+    },
+    {
+      "file": "patient091_frame09.nii.gz",
+      "slice": 5,
+      "mre": 6.0544,
+      "lm1_error": 10.7089,
+      "lm2_error": 1.4
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 0,
+      "mre": 3.3509,
+      "lm1_error": 4.4141,
+      "lm2_error": 2.2877
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 1,
+      "mre": 3.3207,
+      "lm1_error": 5.0577,
+      "lm2_error": 1.5837
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 2,
+      "mre": 23.6323,
+      "lm1_error": 45.0841,
+      "lm2_error": 2.1806
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 3,
+      "mre": 3.7578,
+      "lm1_error": 3.1866,
+      "lm2_error": 4.329
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 4,
+      "mre": 22.6153,
+      "lm1_error": 43.5286,
+      "lm2_error": 1.7021
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 5,
+      "mre": 20.3804,
+      "lm1_error": 40.259,
+      "lm2_error": 0.5017
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 6,
+      "mre": 1.9066,
+      "lm1_error": 2.8565,
+      "lm2_error": 0.9566
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 7,
+      "mre": 18.319,
+      "lm1_error": 35.2056,
+      "lm2_error": 1.4325
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 8,
+      "mre": 17.4891,
+      "lm1_error": 34.5784,
+      "lm2_error": 0.3998
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 9,
+      "mre": 15.7942,
+      "lm1_error": 30.0615,
+      "lm2_error": 1.5269
+    },
+    {
+      "file": "patient092_frame01.nii.gz",
+      "slice": 10,
+      "mre": 14.5847,
+      "lm1_error": 23.0054,
+      "lm2_error": 6.164
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 0,
+      "mre": 3.1738,
+      "lm1_error": 1.1688,
+      "lm2_error": 5.1787
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 1,
+      "mre": 4.4552,
+      "lm1_error": 3.8947,
+      "lm2_error": 5.0158
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 2,
+      "mre": 20.551,
+      "lm1_error": 2.5851,
+      "lm2_error": 38.5168
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 3,
+      "mre": 18.529,
+      "lm1_error": 2.0201,
+      "lm2_error": 35.0378
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 4,
+      "mre": 17.0051,
+      "lm1_error": 31.746,
+      "lm2_error": 2.2641
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 5,
+      "mre": 15.3081,
+      "lm1_error": 29.1258,
+      "lm2_error": 1.4905
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 6,
+      "mre": 13.9215,
+      "lm1_error": 26.1535,
+      "lm2_error": 1.6894
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 7,
+      "mre": 13.2187,
+      "lm1_error": 22.6818,
+      "lm2_error": 3.7557
+    },
+    {
+      "file": "patient092_frame06.nii.gz",
+      "slice": 8,
+      "mre": 13.0743,
+      "lm1_error": 19.3627,
+      "lm2_error": 6.7859
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 0,
+      "mre": 2.0398,
+      "lm1_error": 2.9027,
+      "lm2_error": 1.1769
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 1,
+      "mre": 23.7506,
+      "lm1_error": 46.8485,
+      "lm2_error": 0.6528
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 2,
+      "mre": 22.1684,
+      "lm1_error": 1.5147,
+      "lm2_error": 42.822
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 3,
+      "mre": 17.9114,
+      "lm1_error": 33.542,
+      "lm2_error": 2.2809
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 4,
+      "mre": 17.2395,
+      "lm1_error": 32.3905,
+      "lm2_error": 2.0885
+    },
+    {
+      "file": "patient093_frame01.nii.gz",
+      "slice": 5,
+      "mre": 12.815,
+      "lm1_error": 24.1525,
+      "lm2_error": 1.4775
+    },
+    {
+      "file": "patient093_frame14.nii.gz",
+      "slice": 0,
+      "mre": 3.9455,
+      "lm1_error": 4.3982,
+      "lm2_error": 3.4928
+    },
+    {
+      "file": "patient093_frame14.nii.gz",
+      "slice": 1,
+      "mre": 2.9872,
+      "lm1_error": 1.1854,
+      "lm2_error": 4.789
+    },
+    {
+      "file": "patient093_frame14.nii.gz",
+      "slice": 2,
+      "mre": 14.6613,
+      "lm1_error": 28.2415,
+      "lm2_error": 1.0811
+    },
+    {
+      "file": "patient093_frame14.nii.gz",
+      "slice": 3,
+      "mre": 13.8397,
+      "lm1_error": 26.1571,
+      "lm2_error": 1.5224
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 0,
+      "mre": 18.1599,
+      "lm1_error": 1.7091,
+      "lm2_error": 34.6107
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 1,
+      "mre": 19.3624,
+      "lm1_error": 0.5268,
+      "lm2_error": 38.1981
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 2,
+      "mre": 20.2022,
+      "lm1_error": 0.1704,
+      "lm2_error": 40.234
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 3,
+      "mre": 20.66,
+      "lm1_error": 1.0902,
+      "lm2_error": 40.2298
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 4,
+      "mre": 21.8761,
+      "lm1_error": 41.2152,
+      "lm2_error": 2.537
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 5,
+      "mre": 20.2841,
+      "lm1_error": 37.6156,
+      "lm2_error": 2.9525
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 6,
+      "mre": 1.8972,
+      "lm1_error": 1.6707,
+      "lm2_error": 2.1237
+    },
+    {
+      "file": "patient094_frame01.nii.gz",
+      "slice": 7,
+      "mre": 17.8123,
+      "lm1_error": 3.3294,
+      "lm2_error": 32.2953
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 0,
+      "mre": 20.035,
+      "lm1_error": 4.3496,
+      "lm2_error": 35.7204
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 1,
+      "mre": 19.4727,
+      "lm1_error": 4.2281,
+      "lm2_error": 34.7173
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 2,
+      "mre": 19.2804,
+      "lm1_error": 2.4783,
+      "lm2_error": 36.0825
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 3,
+      "mre": 3.1326,
+      "lm1_error": 1.4949,
+      "lm2_error": 4.7704
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 4,
+      "mre": 1.9403,
+      "lm1_error": 1.3903,
+      "lm2_error": 2.4903
+    },
+    {
+      "file": "patient094_frame07.nii.gz",
+      "slice": 5,
+      "mre": 16.1035,
+      "lm1_error": 3.4623,
+      "lm2_error": 28.7447
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 0,
+      "mre": 26.3516,
+      "lm1_error": 0.9432,
+      "lm2_error": 51.7601
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 1,
+      "mre": 26.3819,
+      "lm1_error": 2.3656,
+      "lm2_error": 50.3982
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 2,
+      "mre": 24.3881,
+      "lm1_error": 1.2675,
+      "lm2_error": 47.5088
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 3,
+      "mre": 27.1071,
+      "lm1_error": 50.7016,
+      "lm2_error": 3.5126
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 4,
+      "mre": 26.0636,
+      "lm1_error": 4.0756,
+      "lm2_error": 48.0515
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 5,
+      "mre": 3.8053,
+      "lm1_error": 4.5,
+      "lm2_error": 3.1106
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 6,
+      "mre": 3.1904,
+      "lm1_error": 4.741,
+      "lm2_error": 1.6397
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 7,
+      "mre": 22.1007,
+      "lm1_error": 43.1565,
+      "lm2_error": 1.0449
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 8,
+      "mre": 21.3444,
+      "lm1_error": 41.1598,
+      "lm2_error": 1.5291
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 9,
+      "mre": 19.5589,
+      "lm1_error": 38.5839,
+      "lm2_error": 0.5338
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 10,
+      "mre": 18.9917,
+      "lm1_error": 36.5772,
+      "lm2_error": 1.4063
+    },
+    {
+      "file": "patient095_frame01.nii.gz",
+      "slice": 11,
+      "mre": 17.5301,
+      "lm1_error": 33.1296,
+      "lm2_error": 1.9306
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 0,
+      "mre": 24.631,
+      "lm1_error": 6.9396,
+      "lm2_error": 42.3224
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 1,
+      "mre": 21.1677,
+      "lm1_error": 41.4244,
+      "lm2_error": 0.911
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 2,
+      "mre": 22.0404,
+      "lm1_error": 3.3252,
+      "lm2_error": 40.7556
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 3,
+      "mre": 20.3505,
+      "lm1_error": 1.0013,
+      "lm2_error": 39.6997
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 4,
+      "mre": 21.4701,
+      "lm1_error": 1.3718,
+      "lm2_error": 41.5685
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 5,
+      "mre": 3.7539,
+      "lm1_error": 4.724,
+      "lm2_error": 2.7838
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 6,
+      "mre": 21.9497,
+      "lm1_error": 42.1172,
+      "lm2_error": 1.7822
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 7,
+      "mre": 2.9627,
+      "lm1_error": 4.5157,
+      "lm2_error": 1.4097
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 8,
+      "mre": 2.5987,
+      "lm1_error": 2.6099,
+      "lm2_error": 2.5876
+    },
+    {
+      "file": "patient095_frame12.nii.gz",
+      "slice": 9,
+      "mre": 16.8169,
+      "lm1_error": 4.0262,
+      "lm2_error": 29.6076
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 0,
+      "mre": 25.7305,
+      "lm1_error": 51.0218,
+      "lm2_error": 0.4393
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 1,
+      "mre": 25.8581,
+      "lm1_error": 51.1044,
+      "lm2_error": 0.6118
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 2,
+      "mre": 27.5429,
+      "lm1_error": 53.4514,
+      "lm2_error": 1.6344
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 3,
+      "mre": 3.6554,
+      "lm1_error": 1.1446,
+      "lm2_error": 6.1662
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 4,
+      "mre": 23.0444,
+      "lm1_error": 1.1409,
+      "lm2_error": 44.9479
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 5,
+      "mre": 26.2296,
+      "lm1_error": 1.7814,
+      "lm2_error": 50.6777
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 6,
+      "mre": 1.1948,
+      "lm1_error": 0.9168,
+      "lm2_error": 1.4727
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 7,
+      "mre": 25.0693,
+      "lm1_error": 48.1305,
+      "lm2_error": 2.0081
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 8,
+      "mre": 26.0115,
+      "lm1_error": 50.1008,
+      "lm2_error": 1.9222
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 9,
+      "mre": 24.4077,
+      "lm1_error": 46.9474,
+      "lm2_error": 1.8681
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 10,
+      "mre": 22.8315,
+      "lm1_error": 44.1102,
+      "lm2_error": 1.5528
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 11,
+      "mre": 20.7861,
+      "lm1_error": 40.1611,
+      "lm2_error": 1.411
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 12,
+      "mre": 19.3242,
+      "lm1_error": 35.9789,
+      "lm2_error": 2.6695
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 13,
+      "mre": 14.3109,
+      "lm1_error": 28.0621,
+      "lm2_error": 0.5596
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 14,
+      "mre": 12.6934,
+      "lm1_error": 24.1441,
+      "lm2_error": 1.2427
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 15,
+      "mre": 12.7586,
+      "lm1_error": 22.8046,
+      "lm2_error": 2.7126
+    },
+    {
+      "file": "patient096_frame01.nii.gz",
+      "slice": 16,
+      "mre": 12.9531,
+      "lm1_error": 21.7508,
+      "lm2_error": 4.1554
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 0,
+      "mre": 22.0519,
+      "lm1_error": 42.919,
+      "lm2_error": 1.1849
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 1,
+      "mre": 22.3703,
+      "lm1_error": 43.1609,
+      "lm2_error": 1.5797
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 2,
+      "mre": 23.6602,
+      "lm1_error": 46.6958,
+      "lm2_error": 0.6246
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 3,
+      "mre": 1.4378,
+      "lm1_error": 1.3505,
+      "lm2_error": 1.5251
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 4,
+      "mre": 23.1315,
+      "lm1_error": 44.2523,
+      "lm2_error": 2.0107
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 5,
+      "mre": 1.3508,
+      "lm1_error": 0.7882,
+      "lm2_error": 1.9133
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 6,
+      "mre": 22.1695,
+      "lm1_error": 43.8657,
+      "lm2_error": 0.4732
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 7,
+      "mre": 23.4707,
+      "lm1_error": 44.0736,
+      "lm2_error": 2.8677
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 8,
+      "mre": 2.961,
+      "lm1_error": 4.9918,
+      "lm2_error": 0.9302
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 9,
+      "mre": 20.5294,
+      "lm1_error": 39.2958,
+      "lm2_error": 1.7631
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 10,
+      "mre": 1.9094,
+      "lm1_error": 1.596,
+      "lm2_error": 2.2228
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 11,
+      "mre": 17.1231,
+      "lm1_error": 2.8326,
+      "lm2_error": 31.4137
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 12,
+      "mre": 0.8531,
+      "lm1_error": 0.3769,
+      "lm2_error": 1.3293
+    },
+    {
+      "file": "patient096_frame08.nii.gz",
+      "slice": 13,
+      "mre": 12.3189,
+      "lm1_error": 22.6456,
+      "lm2_error": 1.9922
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 0,
+      "mre": 23.9676,
+      "lm1_error": 46.2824,
+      "lm2_error": 1.6529
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 1,
+      "mre": 24.833,
+      "lm1_error": 47.3067,
+      "lm2_error": 2.3593
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 2,
+      "mre": 1.4929,
+      "lm1_error": 0.2621,
+      "lm2_error": 2.7237
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 3,
+      "mre": 23.2853,
+      "lm1_error": 43.9939,
+      "lm2_error": 2.5767
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 4,
+      "mre": 21.9794,
+      "lm1_error": 40.6694,
+      "lm2_error": 3.2894
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 5,
+      "mre": 19.2113,
+      "lm1_error": 35.4417,
+      "lm2_error": 2.9809
+    },
+    {
+      "file": "patient097_frame01.nii.gz",
+      "slice": 6,
+      "mre": 16.091,
+      "lm1_error": 30.5173,
+      "lm2_error": 1.6646
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 0,
+      "mre": 20.8765,
+      "lm1_error": 39.9852,
+      "lm2_error": 1.7677
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 1,
+      "mre": 20.3946,
+      "lm1_error": 39.1394,
+      "lm2_error": 1.6498
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 2,
+      "mre": 20.4638,
+      "lm1_error": 39.2092,
+      "lm2_error": 1.7185
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 3,
+      "mre": 19.5528,
+      "lm1_error": 34.6099,
+      "lm2_error": 4.4956
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 4,
+      "mre": 13.8916,
+      "lm1_error": 26.9481,
+      "lm2_error": 0.8351
+    },
+    {
+      "file": "patient097_frame11.nii.gz",
+      "slice": 5,
+      "mre": 11.9292,
+      "lm1_error": 23.0755,
+      "lm2_error": 0.7829
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 0,
+      "mre": 2.1025,
+      "lm1_error": 2.3165,
+      "lm2_error": 1.8886
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 1,
+      "mre": 27.8911,
+      "lm1_error": 5.2424,
+      "lm2_error": 50.5397
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 2,
+      "mre": 4.7497,
+      "lm1_error": 4.713,
+      "lm2_error": 4.7865
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 3,
+      "mre": 1.9342,
+      "lm1_error": 2.7897,
+      "lm2_error": 1.0786
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 4,
+      "mre": 23.1038,
+      "lm1_error": 0.6158,
+      "lm2_error": 45.5919
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 5,
+      "mre": 18.4983,
+      "lm1_error": 1.4682,
+      "lm2_error": 35.5284
+    },
+    {
+      "file": "patient098_frame01.nii.gz",
+      "slice": 6,
+      "mre": 16.9526,
+      "lm1_error": 4.0671,
+      "lm2_error": 29.8381
+    },
+    {
+      "file": "patient098_frame09.nii.gz",
+      "slice": 0,
+      "mre": 28.7848,
+      "lm1_error": 5.167,
+      "lm2_error": 52.4026
+    },
+    {
+      "file": "patient098_frame09.nii.gz",
+      "slice": 1,
+      "mre": 27.5966,
+      "lm1_error": 6.7492,
+      "lm2_error": 48.444
+    },
+    {
+      "file": "patient098_frame09.nii.gz",
+      "slice": 2,
+      "mre": 25.1525,
+      "lm1_error": 4.5877,
+      "lm2_error": 45.7173
+    },
+    {
+      "file": "patient098_frame09.nii.gz",
+      "slice": 3,
+      "mre": 24.8301,
+      "lm1_error": 5.6396,
+      "lm2_error": 44.0205
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 0,
+      "mre": 24.1657,
+      "lm1_error": 44.3877,
+      "lm2_error": 3.9438
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 1,
+      "mre": 23.8625,
+      "lm1_error": 46.7669,
+      "lm2_error": 0.9581
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 2,
+      "mre": 24.3312,
+      "lm1_error": 45.7337,
+      "lm2_error": 2.9287
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 3,
+      "mre": 24.9579,
+      "lm1_error": 46.3258,
+      "lm2_error": 3.5899
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 4,
+      "mre": 3.0974,
+      "lm1_error": 2.2382,
+      "lm2_error": 3.9566
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 5,
+      "mre": 22.8281,
+      "lm1_error": 1.8594,
+      "lm2_error": 43.7968
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 6,
+      "mre": 1.2101,
+      "lm1_error": 0.7824,
+      "lm2_error": 1.6378
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 7,
+      "mre": 1.757,
+      "lm1_error": 1.3738,
+      "lm2_error": 2.1402
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 8,
+      "mre": 19.6838,
+      "lm1_error": 1.679,
+      "lm2_error": 37.6887
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 9,
+      "mre": 18.3909,
+      "lm1_error": 2.9277,
+      "lm2_error": 33.8542
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 10,
+      "mre": 18.8097,
+      "lm1_error": 2.4635,
+      "lm2_error": 35.1559
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 11,
+      "mre": 1.6761,
+      "lm1_error": 1.8211,
+      "lm2_error": 1.5311
+    },
+    {
+      "file": "patient099_frame01.nii.gz",
+      "slice": 12,
+      "mre": 1.963,
+      "lm1_error": 2.8861,
+      "lm2_error": 1.0399
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 0,
+      "mre": 20.5818,
+      "lm1_error": 40.3535,
+      "lm2_error": 0.8102
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 1,
+      "mre": 20.7941,
+      "lm1_error": 39.9607,
+      "lm2_error": 1.6276
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 2,
+      "mre": 20.0934,
+      "lm1_error": 0.6885,
+      "lm2_error": 39.4983
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 3,
+      "mre": 19.6558,
+      "lm1_error": 1.0786,
+      "lm2_error": 38.233
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 4,
+      "mre": 19.6535,
+      "lm1_error": 0.9845,
+      "lm2_error": 38.3224
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 5,
+      "mre": 1.7789,
+      "lm1_error": 1.8735,
+      "lm2_error": 1.6843
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 6,
+      "mre": 18.5163,
+      "lm1_error": 2.7202,
+      "lm2_error": 34.3123
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 7,
+      "mre": 17.6189,
+      "lm1_error": 2.4426,
+      "lm2_error": 32.7953
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 8,
+      "mre": 16.6892,
+      "lm1_error": 1.6739,
+      "lm2_error": 31.7046
+    },
+    {
+      "file": "patient099_frame09.nii.gz",
+      "slice": 9,
+      "mre": 13.8061,
+      "lm1_error": 25.6686,
+      "lm2_error": 1.9437
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 0,
+      "mre": 18.8129,
+      "lm1_error": 0.9843,
+      "lm2_error": 36.6414
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 1,
+      "mre": 19.9147,
+      "lm1_error": 0.5652,
+      "lm2_error": 39.2641
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 2,
+      "mre": 22.2756,
+      "lm1_error": 3.9639,
+      "lm2_error": 40.5873
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 3,
+      "mre": 18.0789,
+      "lm1_error": 34.8572,
+      "lm2_error": 1.3006
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 4,
+      "mre": 16.0683,
+      "lm1_error": 0.5581,
+      "lm2_error": 31.5785
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 5,
+      "mre": 12.1687,
+      "lm1_error": 23.8474,
+      "lm2_error": 0.4901
+    },
+    {
+      "file": "patient100_frame01.nii.gz",
+      "slice": 6,
+      "mre": 7.3656,
+      "lm1_error": 3.0478,
+      "lm2_error": 11.6834
+    },
+    {
+      "file": "patient100_frame13.nii.gz",
+      "slice": 0,
+      "mre": 15.3256,
+      "lm1_error": 2.8213,
+      "lm2_error": 27.8298
+    },
+    {
+      "file": "patient100_frame13.nii.gz",
+      "slice": 1,
+      "mre": 16.1998,
+      "lm1_error": 31.0049,
+      "lm2_error": 1.3946
+    },
+    {
+      "file": "patient100_frame13.nii.gz",
+      "slice": 2,
+      "mre": 16.1229,
+      "lm1_error": 31.7661,
+      "lm2_error": 0.4796
+    },
+    {
+      "file": "patient100_frame13.nii.gz",
+      "slice": 3,
+      "mre": 17.0643,
+      "lm1_error": 4.3114,
+      "lm2_error": 29.8172
+    },
+    {
+      "file": "patient100_frame13.nii.gz",
+      "slice": 4,
+      "mre": 10.3528,
+      "lm1_error": 20.1269,
+      "lm2_error": 0.5786
+    }
+  ]
+}
